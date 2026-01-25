@@ -25,19 +25,6 @@ export const isBtwOrEq = (value: number, a: number, b: number) => {
     return value >= Math.min(a, b) && value <= Math.max(a, b);
 };
 
-let browserSupportsTextareaTextNodes: any;
-function canManipulateViaTextNodes(input: HTMLTextAreaElement | HTMLInputElement): boolean {
-    if (input.nodeName !== 'TEXTAREA') {
-        return false;
-    }
-    if (typeof browserSupportsTextareaTextNodes === 'undefined') {
-        const textarea: HTMLTextAreaElement = document.createElement('textarea');
-        textarea.value = '1';
-        browserSupportsTextareaTextNodes = Boolean(textarea.firstChild);
-    }
-    return browserSupportsTextareaTextNodes;
-}
-
 /**
  * @param {HTMLTextAreaElement|HTMLInputElement} input
  * @param {string} value - The text to insert
