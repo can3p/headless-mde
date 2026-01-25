@@ -2,7 +2,7 @@
 
 This is a fork of https://github.com/Resetand/textarea-markdown-editor
 
-The aim is to trim fix some of the quirks with the scroll position
+The aim is to trim fix some of the quirks with the scroll position, there will be breaking changes, no compatibility planned.
 
 ---
 
