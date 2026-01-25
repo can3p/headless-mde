@@ -1,19 +1,8 @@
 # Textarea Markdown
 
-[![CI status][github-action-image]][github-action-url] [![codecov][codecov-image]][codecov-url] [![NPM version][npm-image]][npm-url]
+This is a fork of https://github.com/Resetand/textarea-markdown-editor
 
-[npm-image]: http://img.shields.io/npm/v/textarea-markdown-editor.svg
-[npm-url]: http://npmjs.org/package/textarea-markdown-editor
-[github-action-image]: https://github.com/Resetand/textarea-markdown-editor/actions/workflows/ci.yaml/badge.svg
-[github-action-url]: https://github.com/Resetand/textarea-markdown-editor/actions/workflows/ci.yaml
-[codecov-image]: https://codecov.io/gh/Resetand/textarea-markdown-editor/branch/master/graph/badge.svg?token=OBD8KR7Y98
-[codecov-url]: https://codecov.io/gh/Resetand/textarea-markdown-editor
-
-```bash
-npm install textarea-markdown-editor
-```
-
-> There are some breaking changes since v1.0.0 released, checkout the [release note](https://github.com/Resetand/textarea-markdown-editor/releases/tag/v1.0.0)
+The aim is to trim fix some of the quirks with the scroll position
 
 ---
 
@@ -265,3 +254,7 @@ export type CommandHandlerContext = {
 trigger: (command: string) => void;
 cursor: Cursor
 ```
+
+## Acknowledgements
+
+All praise goes to https://github.com/Resetand !
