@@ -153,20 +153,23 @@ export const prefixWrappingExtension: Extension = (textarea, options) => {
             // no matches
             return;
         }
+        
         const { prefix, shouldBreak, shouldSaveIndent } = matched;
-
         if (shouldBreak) {
             // for a list line without content remove prefix of this line before default behavior
+            // Let browser handle Enter naturally - no prefix insertion needed
             cursor.replaceLine(enteringLine.lineNumber, '');
             return;
         }
-
-        event?.preventDefault();
-
-        // if shouldSaveIndent need to wrap prefix within intent of entering line
+        
+        // PATCH: Let Enter key create newline naturally (like GitHub), then insert only the prefix
+        // Use input event to ensure newline exists before inserting prefix (fixes Firefox race condition)
         const indent = shouldSaveIndent ? getIndent(enteringLine.text) : '';
-
-        cursor.insert(`\n${indent}${prefix}${Cursor.MARKER}`);
+        const prefixToInsert = `${indent}${prefix}${Cursor.MARKER}`;
+        
+        textarea.addEventListener('input', function() {
+            cursor.insert(prefixToInsert);
+        }, { once: true });
     };
 
     textarea.addEventListener('keydown', keydownListener);
