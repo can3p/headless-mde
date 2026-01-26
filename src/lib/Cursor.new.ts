@@ -124,13 +124,6 @@ export class Cursor {
     }
 
     /**
-     * @returns {number} total number of lines
-     * */
-    public totalLines(): number {
-        return this.lines.length;
-    }
-
-    /**
      * @returns {Line} information about line
      * */
     public lineAt(lineNumber: number): Line | null {
@@ -141,10 +134,11 @@ export class Cursor {
      * Insert text at the cursor position.
      * if some content is selected will replace it
      */
-    public insert(content: string) {
+    public insert(content: string, options?: { forceManual?: boolean }) {
+        const { forceManual = false } = options ?? {};
         const normalizedContent = this.normalizeSelection(content);
         if (!this.selection) {
-            this.insertAtCursor(content);
+            this.insertAtCursor(normalizedContent, forceManual);
             return;
         }
         const start = this.selection.selectionStart;
@@ -152,60 +146,86 @@ export class Cursor {
         
         // PATCH: Use surgical insertion - only replace selected range
         const data = this.execRaw(normalizedContent);
-        if (process.env.NODE_ENV === 'test') {
+        if (process.env.NODE_ENV === 'test' || forceManual) {
+            // Use manual value manipulation (for tests or when execCommand won't work)
             const newValue = this.value.slice(0, start) + data.text + this.value.slice(end);
             this.element.value = newValue;
+            
+            // Set cursor position BEFORE dispatching input event
+            if (data.selectionStart !== null && data.selectionEnd !== null) {
+                const offset = start;
+                this.element.setSelectionRange(offset + data.selectionStart, offset + data.selectionEnd);
+            }
+            
+            // Manually dispatch input event
+            const event = document.createEvent('UIEvent');
+            event.initEvent('input', true, false);
+            this.element.dispatchEvent(event);
         } else {
             // Pass selection range to fireInput for surgical replacement
             fireInput(this.element, data.text, start, end);
-        }
-        
-        // Set cursor position after inserted text
-        if (data.selectionStart !== null && data.selectionEnd !== null) {
-            const offset = start;
-            this.element.selectionStart = offset + data.selectionStart;
-            this.element.selectionEnd = offset + data.selectionEnd;
+            
+            // Set cursor position after inserted text
+            if (data.selectionStart !== null && data.selectionEnd !== null) {
+                const offset = start;
+                this.element.setSelectionRange(offset + data.selectionStart, offset + data.selectionEnd);
+            }
         }
     }
 
-    private insertAtCursor(content: string) {
+    private insertAtCursor(content: string, forceManual?: boolean) {
         const cursorAt = this.position.cursorAt;
-        const normalizedContent = this.normalizeSelection(content);
         
         // PATCH: Use surgical insertion at cursor position
-        const data = this.execRaw(normalizedContent);
-        if (process.env.NODE_ENV === 'test') {
+        // Note: content is already normalized when called from insert()
+        const data = this.execRaw(content);
+        if (process.env.NODE_ENV === 'test' || forceManual) {
+            // Use manual value manipulation (for tests or when execCommand won't work)
             const newValue = this.value.slice(0, cursorAt) + data.text + this.value.slice(cursorAt);
             this.element.value = newValue;
+            
+            // Set cursor position BEFORE dispatching input event
+            // This ensures subsequent operations see the updated cursor position
+            if (data.selectionStart !== null && data.selectionEnd !== null) {
+                this.element.setSelectionRange(cursorAt + data.selectionStart, cursorAt + data.selectionEnd);
+            }
+            
+            // Manually dispatch input event
+            const event = document.createEvent('UIEvent');
+            event.initEvent('input', true, false);
+            this.element.dispatchEvent(event);
         } else {
             // Insert at cursor (replace zero-length selection)
             fireInput(this.element, data.text, cursorAt, cursorAt);
-        }
-        
-        // Set cursor position after inserted text
-        if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.selectionStart = cursorAt + data.selectionStart;
-            this.element.selectionEnd = cursorAt + data.selectionEnd;
+            
+            // Set cursor position after inserted text
+            if (data.selectionStart !== null && data.selectionEnd !== null) {
+                this.element.setSelectionRange(cursorAt + data.selectionStart, cursorAt + data.selectionEnd);
+            }
         }
     }
 
     /**
      * Insert content and scroll it into view if it's below the visible area
+     * @param forceManual - Force manual value manipulation instead of execCommand (for Firefox file inputs)
      */
-    public insertAndScrollIntoView(content: string) {
-        const cursorPositionBefore = this.element.selectionStart;
-        this.insert(content);
+    public insertAndScrollIntoView(content: string, forceManual?: boolean) {
+        this.insert(content, { forceManual });
         
-        // Scroll into view if inserted content is below visible area
-        const textarea = this.element;
-        const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
-        const cursorLine = textarea.value.substring(0, cursorPositionBefore).split('\n').length;
-        const cursorPixelPosition = cursorLine * lineHeight;
-        const visibleBottom = textarea.scrollTop + textarea.clientHeight;
+        // Check if insertion happened below visible area
+        const lineHeight = parseInt(window.getComputedStyle(this.element).lineHeight) || 20;
+        const visibleHeight = this.element.clientHeight;
+        const scrollTop = this.element.scrollTop;
+        const cursorPositionAfter = this.element.selectionStart;
         
-        if (cursorPixelPosition > visibleBottom) {
-            // Content is below visible area, scroll it into view
-            textarea.scrollTop = cursorPixelPosition - textarea.clientHeight + lineHeight * 2;
+        // Estimate line number based on character position
+        const textBeforeCursor = this.element.value.substring(0, cursorPositionAfter);
+        const lineNumber = textBeforeCursor.split('\n').length;
+        const cursorTopPosition = lineNumber * lineHeight;
+        
+        // If cursor is below visible area, scroll to show it
+        if (cursorTopPosition > scrollTop + visibleHeight) {
+            this.element.scrollTop = cursorTopPosition - visibleHeight + lineHeight;
         }
     }
 
@@ -255,8 +275,7 @@ export class Cursor {
         
         // Set cursor position after replaced text
         if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.selectionStart = start + data.selectionStart;
-            this.element.selectionEnd = start + data.selectionEnd;
+            this.element.setSelectionRange(start + data.selectionStart, start + data.selectionEnd);
         }
     }
 
@@ -279,8 +298,8 @@ export class Cursor {
             fireInput(this.element, data.text, start - 1, end);
             // Set cursor position
             if (data.selectionStart !== null) {
-                this.element.selectionStart = start - 1 + data.selectionStart;
-                this.element.selectionEnd = start - 1 + data.selectionStart;
+                const pos = start - 1 + data.selectionStart;
+                this.element.setSelectionRange(pos, pos);
             }
             return;
         }
@@ -291,8 +310,7 @@ export class Cursor {
         
         // Set cursor position after replaced text
         if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.selectionStart = start + data.selectionStart;
-            this.element.selectionEnd = start + data.selectionEnd;
+            this.element.setSelectionRange(start + data.selectionStart, start + data.selectionEnd);
         }
     }
 
@@ -307,8 +325,8 @@ export class Cursor {
         const end = this.selection?.selectionEnd ?? this.position.cursorAt;
 
         if (this.isSelectedWrappedWith(markup) && unwrap) {
-            // PATCH: Unwrap - use surgical replacement
-            const unwrappedContent = text.slice(start, end);
+            // PATCH: Unwrap - use surgical replacement with MARKERs for cursor positioning
+            const unwrappedContent = MARKER + text.slice(start, end) + MARKER;
             const data = this.execRaw(unwrappedContent);
             // Replace from (start - prefix.length) to (end + suffix.length)
             fireInput(this.element, data.text, start - prefix.length, end + suffix.length);
@@ -316,21 +334,19 @@ export class Cursor {
             // Set cursor position
             if (data.selectionStart !== null && data.selectionEnd !== null) {
                 const offset = start - prefix.length;
-                this.element.selectionStart = offset + data.selectionStart;
-                this.element.selectionEnd = offset + data.selectionEnd;
+                this.element.setSelectionRange(offset + data.selectionStart, offset + data.selectionEnd);
             }
             return;
         }
         
-        // PATCH: Wrap - use surgical replacement
-        const wrappedContent = prefix + (text.slice(start, end) || placeholder) + suffix;
+        // PATCH: Wrap - use surgical replacement with MARKERs for cursor positioning
+        const wrappedContent = prefix + MARKER + (text.slice(start, end) || placeholder) + MARKER + suffix;
         const data = this.execRaw(wrappedContent);
         fireInput(this.element, data.text, start, end);
         
         // Set cursor position
         if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.selectionStart = start + data.selectionStart;
-            this.element.selectionEnd = start + data.selectionEnd;
+            this.element.setSelectionRange(start + data.selectionStart, start + data.selectionEnd);
         }
     }
 

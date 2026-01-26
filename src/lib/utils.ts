@@ -88,12 +88,9 @@ export function fireInput(
         event.initEvent('input', true, false);
         input.dispatchEvent(event);
     }
-
-    // PATCH: Explicitly set cursor position after insertion (GitHub's approach)
-    // Position cursor at the end of inserted text
-    const newCursorPos = start + value.length;
-    input.selectionStart = newCursorPos;
-    input.selectionEnd = newCursorPos;
+    
+    // PATCH: Don't set cursor position here - let calling code handle it
+    // Cursor positioning is done by the Cursor methods using MARKER positions from execRaw
 }
 
 /**
