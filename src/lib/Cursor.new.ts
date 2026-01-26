@@ -134,74 +134,52 @@ export class Cursor {
      * Insert text at the cursor position.
      * if some content is selected will replace it
      */
-    public insert(content: string, options?: { forceManual?: boolean }) {
-        const { forceManual = false } = options ?? {};
+    public insert(content: string) {
         const normalizedContent = this.normalizeSelection(content);
         if (!this.selection) {
-            this.insertAtCursor(normalizedContent, forceManual);
+            this.insertAtCursor(content);
             return;
         }
         const start = this.selection.selectionStart;
         const end = this.selection.selectionEnd;
-        
+
         // PATCH: Use surgical insertion - only replace selected range
         const data = this.execRaw(normalizedContent);
-        if (process.env.NODE_ENV === 'test' || forceManual) {
-            // Use manual value manipulation (for tests or when execCommand won't work)
+        if (process.env.NODE_ENV === 'test') {
             const newValue = this.value.slice(0, start) + data.text + this.value.slice(end);
             this.element.value = newValue;
-            
-            // Set cursor position BEFORE dispatching input event
-            if (data.selectionStart !== null && data.selectionEnd !== null) {
-                const offset = start;
-                this.element.setSelectionRange(offset + data.selectionStart, offset + data.selectionEnd);
-            }
-            
-            // Manually dispatch input event
-            const event = document.createEvent('UIEvent');
-            event.initEvent('input', true, false);
-            this.element.dispatchEvent(event);
         } else {
             // Pass selection range to fireInput for surgical replacement
             fireInput(this.element, data.text, start, end);
-            
-            // Set cursor position after inserted text
-            if (data.selectionStart !== null && data.selectionEnd !== null) {
-                const offset = start;
-                this.element.setSelectionRange(offset + data.selectionStart, offset + data.selectionEnd);
-            }
+        }
+
+        // Set cursor position after inserted text
+        if (data.selectionStart !== null && data.selectionEnd !== null) {
+            const offset = start;
+            this.element.selectionStart = offset + data.selectionStart;
+            this.element.selectionEnd = offset + data.selectionEnd;
         }
     }
 
-    private insertAtCursor(content: string, forceManual?: boolean) {
+    private insertAtCursor(content: string) {
         const cursorAt = this.position.cursorAt;
-        
+        const normalizedContent = this.normalizeSelection(content);
+
         // PATCH: Use surgical insertion at cursor position
-        // Note: content is already normalized when called from insert()
         const data = this.execRaw(content);
-        if (process.env.NODE_ENV === 'test' || forceManual) {
-            // Use manual value manipulation (for tests or when execCommand won't work)
+        if (process.env.NODE_ENV === 'test') {
             const newValue = this.value.slice(0, cursorAt) + data.text + this.value.slice(cursorAt);
             this.element.value = newValue;
-            
-            // Set cursor position BEFORE dispatching input event
-            // This ensures subsequent operations see the updated cursor position
-            if (data.selectionStart !== null && data.selectionEnd !== null) {
-                this.element.setSelectionRange(cursorAt + data.selectionStart, cursorAt + data.selectionEnd);
-            }
-            
-            // Manually dispatch input event
-            const event = document.createEvent('UIEvent');
-            event.initEvent('input', true, false);
-            this.element.dispatchEvent(event);
         } else {
             // Insert at cursor (replace zero-length selection)
             fireInput(this.element, data.text, cursorAt, cursorAt);
-            
-            // Set cursor position after inserted text
-            if (data.selectionStart !== null && data.selectionEnd !== null) {
-                this.element.setSelectionRange(cursorAt + data.selectionStart, cursorAt + data.selectionEnd);
-            }
+        }
+
+        // Set cursor position after inserted text
+        if (data.selectionStart !== null && data.selectionEnd !== null) {
+            const offset = start;
+            this.element.selectionStart = offset + data.selectionStart;
+            this.element.selectionEnd = offset + data.selectionEnd;
         }
     }
 
@@ -209,23 +187,20 @@ export class Cursor {
      * Insert content and scroll it into view if it's below the visible area
      * @param forceManual - Force manual value manipulation instead of execCommand (for Firefox file inputs)
      */
-    public insertAndScrollIntoView(content: string, forceManual?: boolean) {
-        this.insert(content, { forceManual });
-        
-        // Check if insertion happened below visible area
-        const lineHeight = parseInt(window.getComputedStyle(this.element).lineHeight) || 20;
-        const visibleHeight = this.element.clientHeight;
-        const scrollTop = this.element.scrollTop;
-        const cursorPositionAfter = this.element.selectionStart;
-        
-        // Estimate line number based on character position
-        const textBeforeCursor = this.element.value.substring(0, cursorPositionAfter);
-        const lineNumber = textBeforeCursor.split('\n').length;
-        const cursorTopPosition = lineNumber * lineHeight;
-        
-        // If cursor is below visible area, scroll to show it
-        if (cursorTopPosition > scrollTop + visibleHeight) {
-            this.element.scrollTop = cursorTopPosition - visibleHeight + lineHeight;
+    public insertAndScrollIntoView(content: string) {
+        var cursorPositionBefore = this.element.selectionStart;
+        this.insert(content);
+
+        // Scroll into view if inserted content is below visible area
+        const textarea = this.element;
+        const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+        const cursorLine = textarea.value.substring(0, cursorPositionBefore).split('\n').length;
+        const cursorPixelPosition = cursorLine * lineHeight;
+        const visibleBottom = textarea.scrollTop + textarea.clientHeight;
+
+        if (cursorPixelPosition > visibleBottom) {
+            // Content is below visible area, scroll it into view
+            textarea.scrollTop = cursorPixelPosition - textarea.clientHeight + lineHeight * 2;
         }
     }
 
@@ -240,7 +215,7 @@ export class Cursor {
             return; // Text not found
         }
         const searchEnd = searchStart + searchText.length;
-        
+
         // Preserve scroll position
         const savedScrollTop = this.element.scrollTop;
         fireInput(this.element, replacement, searchStart, searchEnd);
@@ -268,14 +243,15 @@ export class Cursor {
 
         const start = selectedLines[0].startsAt;
         const end = selectedLines[selectedLines.length - 1].endsAt;
-        
+
         // PATCH: Use surgical insertion instead of setValue to avoid scroll jumps
         const data = this.execRaw(this.normalizeSelection(content, selectReplaced ? 'SELECT_ALL' : 'TO_END'));
         fireInput(this.element, data.text, start, end);
-        
+
         // Set cursor position after replaced text
         if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.setSelectionRange(start + data.selectionStart, start + data.selectionEnd);
+            this.element.selectionStart = start + data.selectionStart;
+            this.element.selectionEnd = start + data.selectionEnd;
         }
     }
 
@@ -298,19 +274,20 @@ export class Cursor {
             fireInput(this.element, data.text, start - 1, end);
             // Set cursor position
             if (data.selectionStart !== null) {
-                const pos = start - 1 + data.selectionStart;
-                this.element.setSelectionRange(pos, pos);
+                this.element.selectionStart = start - 1 + data.selectionStart;
+                this.element.selectionEnd = start - 1 + data.selectionStart;
             }
             return;
         }
-        
+
         // PATCH: Use surgical insertion instead of setValue
         const data = this.execRaw(this.normalizeSelection(content));
         fireInput(this.element, data.text, start, end);
-        
+
         // Set cursor position after replaced text
         if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.setSelectionRange(start + data.selectionStart, start + data.selectionEnd);
+            this.element.selectionStart = start + data.selectionStart;
+            this.element.selectionEnd = start + data.selectionEnd;
         }
     }
 
@@ -325,28 +302,30 @@ export class Cursor {
         const end = this.selection?.selectionEnd ?? this.position.cursorAt;
 
         if (this.isSelectedWrappedWith(markup) && unwrap) {
-            // PATCH: Unwrap - use surgical replacement with MARKERs for cursor positioning
-            const unwrappedContent = MARKER + text.slice(start, end) + MARKER;
+            // PATCH: Unwrap - use surgical replacement
+            const unwrappedContent = text.slice(start, end);
             const data = this.execRaw(unwrappedContent);
             // Replace from (start - prefix.length) to (end + suffix.length)
             fireInput(this.element, data.text, start - prefix.length, end + suffix.length);
-            
+
             // Set cursor position
             if (data.selectionStart !== null && data.selectionEnd !== null) {
                 const offset = start - prefix.length;
-                this.element.setSelectionRange(offset + data.selectionStart, offset + data.selectionEnd);
+                this.element.selectionStart = offset + data.selectionStart;
+                this.element.selectionEnd = offset + data.selectionEnd;
             }
             return;
         }
-        
-        // PATCH: Wrap - use surgical replacement with MARKERs for cursor positioning
-        const wrappedContent = prefix + MARKER + (text.slice(start, end) || placeholder) + MARKER + suffix;
+
+        // PATCH: Wrap - use surgical replacement
+        const wrappedContent = prefix + (text.slice(start, end) || placeholder) + suffix;
         const data = this.execRaw(wrappedContent);
         fireInput(this.element, data.text, start, end);
-        
+
         // Set cursor position
         if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.setSelectionRange(start + data.selectionStart, start + data.selectionEnd);
+            this.element.selectionStart = start + data.selectionStart;
+            this.element.selectionEnd = start + data.selectionEnd;
         }
     }
 

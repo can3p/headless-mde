@@ -53,15 +53,13 @@ export function fireInput(
 
     // Try execCommand with contentEditable trick (GitHub's approach)
     if (document.execCommand) {
-        const originalContentEditable = (input as any).contentEditable;
+        input.contentEditable = 'true';
         try {
-            (input as any).contentEditable = 'true';
             isSuccess = document.execCommand('insertText', false, value);
-            (input as any).contentEditable = originalContentEditable;
         } catch (e) {
-            (input as any).contentEditable = originalContentEditable;
             isSuccess = false;
         }
+        input.contentEditable = 'false';
     }
 
     // Fallback: manual value manipulation
@@ -88,9 +86,12 @@ export function fireInput(
         event.initEvent('input', true, false);
         input.dispatchEvent(event);
     }
-    
-    // PATCH: Don't set cursor position here - let calling code handle it
-    // Cursor positioning is done by the Cursor methods using MARKER positions from execRaw
+
+    // PATCH: Explicitly set cursor position after insertion (GitHub's approach)
+    // Position cursor at the end of inserted text
+    const newCursorPos = start + value.length;
+    input.selectionStart = newCursorPos;
+    input.selectionEnd = newCursorPos;
 }
 
 /**
