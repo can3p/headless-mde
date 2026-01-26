@@ -166,7 +166,7 @@ export class Cursor {
         const normalizedContent = this.normalizeSelection(content);
 
         // PATCH: Use surgical insertion at cursor position
-        const data = this.execRaw(content);
+        const data = this.execRaw(normalizedContent);
         if (process.env.NODE_ENV === 'test') {
             const newValue = this.value.slice(0, cursorAt) + data.text + this.value.slice(cursorAt);
             this.element.value = newValue;
@@ -177,9 +177,8 @@ export class Cursor {
 
         // Set cursor position after inserted text
         if (data.selectionStart !== null && data.selectionEnd !== null) {
-            const offset = start;
-            this.element.selectionStart = offset + data.selectionStart;
-            this.element.selectionEnd = offset + data.selectionEnd;
+            this.element.selectionStart = cursorAt + data.selectionStart;
+            this.element.selectionEnd = cursorAt + data.selectionEnd;
         }
     }
 
