@@ -255,6 +255,38 @@ trigger: (command: string) => void;
 cursor: Cursor
 ```
 
+## Development
+
+### Publishing Releases
+
+This package is automatically published to npm when a GitHub release is created.
+
+#### Setup (one-time, for maintainers)
+
+1. **Create an npm access token:**
+   - Go to [npmjs.com](https://www.npmjs.com/) → Account Settings → Access Tokens
+   - Click "Generate New Token" → Select "Automation" type
+   - Copy the token
+
+2. **Add the token to GitHub repository secrets:**
+   - Go to your GitHub repository → Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `NPM_TOKEN`
+   - Value: paste your npm token
+   - Click "Add secret"
+
+#### Creating a release
+
+Just create a GitHub release with a version tag (e.g., `v1.0.0`). The workflow will:
+
+1. Extract the version from the tag
+2. Update `package.json` automatically
+3. Run lint, tests, and build
+4. Commit the version bump and move the tag to point to it
+5. Publish to npm
+
+No manual version bumping required! The release tag will always point to the commit with the correct version in `package.json`.
+
 ## Acknowledgements
 
 All praise goes to https://github.com/Resetand !
