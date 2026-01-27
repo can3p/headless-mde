@@ -1,4 +1,4 @@
-import { Cursor, Line, Selection } from '../lib/Cursor';
+import { Cursor, Line } from '../lib/Cursor';
 
 const createTextArea = (content: string) => {
     const el = document.createElement('textarea');
