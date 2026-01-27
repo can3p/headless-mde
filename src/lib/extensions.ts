@@ -1,7 +1,7 @@
 import { Extension, PrefixWrappingConfig } from './types';
 import { escapeRegExp, getIncrementedOrderedListPrefix, isBtwOrEq, isImageURL, isURL, metaCombination } from './utils';
 
-import { Cursor } from './Cursor.new';
+import { Cursor } from './Cursor';
 import Mousetrap from 'mousetrap';
 
 /**

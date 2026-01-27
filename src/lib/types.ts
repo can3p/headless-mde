@@ -1,4 +1,4 @@
-import { Cursor, Line } from './Cursor.new';
+import { Cursor, Line } from './Cursor';
 import { ComponentPropsWithoutRef, ForwardRefExoticComponent, ReactElement, RefAttributes } from 'react';
 
 /** https://github.com/Microsoft/TypeScript/issues/29729 */

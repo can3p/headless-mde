@@ -1,6 +1,6 @@
 import { CommandHandler } from './types';
 import { clamp, escapeRegExp } from './utils';
-import { Cursor } from './Cursor.new';
+import { Cursor } from './Cursor';
 
 export const boldCommandHandler: CommandHandler = ({ cursor, options: { preferredBoldSyntax, boldPlaceholder } }) => {
     cursor.wrap(preferredBoldSyntax, { placeholder: boldPlaceholder });

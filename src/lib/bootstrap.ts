@@ -1,6 +1,6 @@
 import Mousetrap from 'mousetrap';
 import { buildInCommands } from './commands';
-import { Cursor } from './Cursor.new';
+import { Cursor } from './Cursor';
 import {
     properLineRemoveBehaviorExtension,
     indentExtension,
