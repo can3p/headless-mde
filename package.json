@@ -4,6 +4,10 @@
   "version": "0.0.2",
   "description": "UI headless React markdown editor using only textarea",
   "homepage": "https://github.com/can3p/headless-mde",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/can3p/headless-mde"
+  },
   "author": "Resetand / can3p",
   "license": "MIT",
   "keywords": [
