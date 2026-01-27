@@ -261,19 +261,7 @@ cursor: Cursor
 
 This package is automatically published to npm when a GitHub release is created.
 
-#### Setup (one-time, for maintainers)
-
-1. **Create an npm access token:**
-   - Go to [npmjs.com](https://www.npmjs.com/) → Account Settings → Access Tokens
-   - Click "Generate New Token" → Select "Automation" type
-   - Copy the token
-
-2. **Add the token to GitHub repository secrets:**
-   - Go to your GitHub repository → Settings → Secrets and variables → Actions
-   - Click "New repository secret"
-   - Name: `NPM_TOKEN`
-   - Value: paste your npm token
-   - Click "Add secret"
+Setup was done by following trusted publisher guide: https://docs.npmjs.com/trusted-publishers
 
 #### Creating a release
 
