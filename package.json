@@ -1,10 +1,10 @@
 {
   "name": "headless-mde",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "UI headless React markdown editor using only textarea",
   "homepage": "https://github.com/can3p/headless-mde",
-  "author": "Resetand",
+  "author": "Resetand / can3p",
   "license": "MIT",
   "keywords": [
     "react",
