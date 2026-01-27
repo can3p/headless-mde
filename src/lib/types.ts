@@ -44,7 +44,7 @@ export type CommandConfig<TType extends CommandType = CommandType> = {
     /** Handler function for custom commands */
     handler: CommandHandler;
 
-    /** Shortcut combinations ([Mousetrap.js](https://craig.is/killing/mice)) */
+    /** Shortcut combinations (e.g., 'command+b', 'ctrl+i', 'shift+tab') */
     shortcut?: string | string[];
 
     /** Toggle key event prevent `default:false` */

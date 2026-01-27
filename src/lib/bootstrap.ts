@@ -1,4 +1,4 @@
-import Mousetrap from 'mousetrap';
+import { KeyboardShortcuts } from './keyboard';
 import { buildInCommands } from './commands';
 import { Cursor } from './Cursor';
 import {
@@ -25,7 +25,7 @@ type BootstrapConfig = {
 
 export const bootstrapTextareaMarkdown = (textarea: HTMLTextAreaElement, config: BootstrapConfig = {}) => {
     const cursor = new Cursor(textarea);
-    const mousetrap = new Mousetrap(textarea);
+    const keyboard = new KeyboardShortcuts(textarea);
 
     const commands = mergedCommandsList(config.commands);
     const options = { ...defaultTextareaMarkdownOptions, ...config.options };
@@ -51,7 +51,7 @@ export const bootstrapTextareaMarkdown = (textarea: HTMLTextAreaElement, config:
     // subscribe on shortcuts
     commands.forEach((command) => {
         if (command.shortcut) {
-            mousetrap.bind(command.shortcut, (keyEvent) => {
+            keyboard.bind(command.shortcut, (keyEvent) => {
                 if (command.shortcutPreventDefault) {
                     keyEvent.preventDefault();
                 }
@@ -71,7 +71,7 @@ export const bootstrapTextareaMarkdown = (textarea: HTMLTextAreaElement, config:
 
     // unsubscribe from all listeners
     const dispose = () => {
-        mousetrap.reset();
+        keyboard.reset();
         extensions.forEach((cleanupExtension) => cleanupExtension instanceof Function && cleanupExtension());
     };
 

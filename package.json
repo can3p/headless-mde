@@ -31,9 +31,7 @@
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
     "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
   },
-  "dependencies": {
-    "mousetrap": "^1.6.5"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -41,7 +39,6 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/common-tags": "^1.8.4",
     "@types/jest": "^29.5.14",
-    "@types/mousetrap": "^1.6.15",
     "@types/node": "^22.12.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",

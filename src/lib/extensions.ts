@@ -2,7 +2,7 @@ import { Extension, PrefixWrappingConfig } from './types';
 import { escapeRegExp, getIncrementedOrderedListPrefix, isBtwOrEq, isImageURL, isURL, metaCombination } from './utils';
 
 import { Cursor } from './Cursor';
-import Mousetrap from 'mousetrap';
+import { KeyboardShortcuts } from './keyboard';
 
 /**
  * Handle the paste event, if the pasted text is a URL and something is selected, it will be converted to link/image markup.
@@ -68,10 +68,10 @@ export const linkPasteExtension: Extension = (textarea) => {
  * Handle `tab`/`shift+tab` combination. Will insert or remove an intend depends on selection
  */
 export const indentExtension: Extension = (textarea) => {
-    const mousetrap = Mousetrap(textarea);
+    const keyboard = new KeyboardShortcuts(textarea);
     const cursor = new Cursor(textarea);
 
-    mousetrap.bind('tab', (event) => {
+    keyboard.bind('tab', (event) => {
         event?.preventDefault();
         const indent = ' '.repeat(4);
 
@@ -84,7 +84,7 @@ export const indentExtension: Extension = (textarea) => {
         }
     });
 
-    mousetrap.bind('shift+tab', (event) => {
+    keyboard.bind('shift+tab', (event) => {
         event?.preventDefault();
         cursor.replaceCurrentLines((line) => line.text.replace(/\s{0,4}/, ''), {
             // select lines if something was selected
@@ -92,7 +92,7 @@ export const indentExtension: Extension = (textarea) => {
         });
     });
 
-    return () => mousetrap.reset();
+    return () => keyboard.reset();
 };
 
 /**
@@ -187,16 +187,16 @@ export const prefixWrappingExtension: Extension = (textarea, options) => {
 
 export const properLineRemoveBehaviorExtension: Extension = (textarea) => {
     const cursor = new Cursor(textarea);
-    const mousetrap = Mousetrap(textarea);
+    const keyboard = new KeyboardShortcuts(textarea);
 
-    mousetrap.bind(metaCombination('backspace'), (event) => {
+    keyboard.bind(metaCombination('backspace'), (event) => {
         if (cursor.position.line.text === '') {
             event.preventDefault();
             cursor.replaceLine(cursor.position.line.lineNumber, null);
         }
     });
 
-    return () => mousetrap.reset();
+    return () => keyboard.reset();
 };
 
 export const orderedListAutoCorrectExtension: Extension = (textarea) => {
