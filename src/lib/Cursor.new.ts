@@ -301,8 +301,8 @@ export class Cursor {
         const end = this.selection?.selectionEnd ?? this.position.cursorAt;
 
         if (this.isSelectedWrappedWith(markup) && unwrap) {
-            // PATCH: Unwrap - use surgical replacement
-            const unwrappedContent = text.slice(start, end);
+            // PATCH: Unwrap - use surgical replacement with MARKERs for cursor positioning
+            const unwrappedContent = MARKER + text.slice(start, end) + MARKER;
             const data = this.execRaw(unwrappedContent);
             // Replace from (start - prefix.length) to (end + suffix.length)
             fireInput(this.element, data.text, start - prefix.length, end + suffix.length);
@@ -316,8 +316,8 @@ export class Cursor {
             return;
         }
 
-        // PATCH: Wrap - use surgical replacement
-        const wrappedContent = prefix + (text.slice(start, end) || placeholder) + suffix;
+        // PATCH: Wrap - use surgical replacement with MARKERs for cursor positioning
+        const wrappedContent = prefix + MARKER + (text.slice(start, end) || placeholder) + MARKER + suffix;
         const data = this.execRaw(wrappedContent);
         fireInput(this.element, data.text, start, end);
 
