@@ -1,5 +1,5 @@
 {
-  "name": "headless-mde",
+  "name": "@can3p/headless-mde",
   "type": "module",
   "version": "0.0.1",
   "description": "UI headless React markdown editor using only textarea",
