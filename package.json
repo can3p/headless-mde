@@ -50,10 +50,8 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.1.0",
-    "husky": "^9.1.7",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "lint-staged": "^15.4.3",
     "npm-watch": "^0.13.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -68,7 +66,7 @@
     "test:coverage": "npm run test -- --coverage",
     "prepublish": "npm run lint && npm run test -- --watchAll=false && npm run build",
     "start-sandbox": "npm run build; npm --prefix sandbox i -f; npm link sandbox/node_modules/react; npm --prefix sandbox run start",
-    "prepare": "husky install"
+    "prepare": "echo 'Ready'"
   },
   "watch": {
     "build": {
