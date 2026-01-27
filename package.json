@@ -14,9 +14,16 @@
     "formatting",
     "shortcuts"
   ],
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
-  "types": "dist/esm/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -56,9 +63,7 @@
   },
   "scripts": {
     "lint": "eslint --max-warnings=0 src --fix",
-    "build": "npm run build:esm && npm run build:cjs",
-    "build:esm": "tsc",
-    "build:cjs": "tsc --module commonjs --outDir dist/cjs",
+    "build": "tsc",
     "test": "./node_modules/.bin/jest --colors",
     "test:coverage": "npm run test -- --coverage",
     "prepublish": "npm run lint && npm run test -- --watchAll=false && npm run build",
