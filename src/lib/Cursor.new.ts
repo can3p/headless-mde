@@ -123,29 +123,6 @@ export class Cursor {
         return { cursorAt: position, line };
     }
 
-    public setValue(text: string) {
-        const data = this.execRaw(text);
-
-        // TODO check if there are other way to make it work
-        if (process.env.NODE_ENV === 'test') {
-            this.element.value = data.text;
-        } else {
-            fireInput(this.element, data.text);
-        }
-
-        if (data.selectionStart === null && data.selectionEnd === null) {
-            return;
-        }
-
-        // if no end of selection or start == end
-        if (data.selectionStart !== null && (data.selectionEnd === null || data.selectionStart === data.selectionEnd)) {
-            this.element.selectionStart = data.selectionStart;
-            this.element.selectionEnd = data.selectionStart;
-        } else {
-            this.element.setSelectionRange(data.selectionStart!, data.selectionEnd!);
-        }
-    }
-
     /**
      * @returns {Line} information about line
      * */
@@ -158,23 +135,90 @@ export class Cursor {
      * if some content is selected will replace it
      */
     public insert(content: string) {
+        const normalizedContent = this.normalizeSelection(content);
         if (!this.selection) {
             this.insertAtCursor(content);
             return;
         }
         const start = this.selection.selectionStart;
         const end = this.selection.selectionEnd;
-        const newValue = this.value.slice(0, start) + this.normalizeSelection(content) + this.value.slice(end);
-        this.setValue(newValue);
+
+        // PATCH: Use surgical insertion - only replace selected range
+        const data = this.execRaw(normalizedContent);
+        if (process.env.NODE_ENV === 'test') {
+            const newValue = this.value.slice(0, start) + data.text + this.value.slice(end);
+            this.element.value = newValue;
+        } else {
+            // Pass selection range to fireInput for surgical replacement
+            fireInput(this.element, data.text, start, end);
+        }
+
+        // Set cursor position after inserted text
+        if (data.selectionStart !== null && data.selectionEnd !== null) {
+            const offset = start;
+            this.element.selectionStart = offset + data.selectionStart;
+            this.element.selectionEnd = offset + data.selectionEnd;
+        }
     }
 
     private insertAtCursor(content: string) {
         const cursorAt = this.position.cursorAt;
-        const newValue =
-            this.value.slice(0, cursorAt) +
-            this.normalizeSelection(content) +
-            this.value.slice(cursorAt, this.value.length);
-        this.setValue(newValue);
+        const normalizedContent = this.normalizeSelection(content);
+
+        // PATCH: Use surgical insertion at cursor position
+        const data = this.execRaw(normalizedContent);
+        if (process.env.NODE_ENV === 'test') {
+            const newValue = this.value.slice(0, cursorAt) + data.text + this.value.slice(cursorAt);
+            this.element.value = newValue;
+        } else {
+            // Insert at cursor (replace zero-length selection)
+            fireInput(this.element, data.text, cursorAt, cursorAt);
+        }
+
+        // Set cursor position after inserted text
+        if (data.selectionStart !== null) {
+            this.element.selectionStart = cursorAt + data.selectionStart;
+            this.element.selectionEnd = cursorAt + (data.selectionEnd ?? data.selectionStart);
+        }
+    }
+
+    /**
+     * Insert content and scroll it into view if it's below the visible area
+     * @param forceManual - Force manual value manipulation instead of execCommand (for Firefox file inputs)
+     */
+    public insertAndScrollIntoView(content: string) {
+        var cursorPositionBefore = this.element.selectionStart;
+        this.insert(content);
+
+        // Scroll into view if inserted content is below visible area
+        const textarea = this.element;
+        const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+        const cursorLine = textarea.value.substring(0, cursorPositionBefore).split('\n').length;
+        const cursorPixelPosition = cursorLine * lineHeight;
+        const visibleBottom = textarea.scrollTop + textarea.clientHeight;
+
+        if (cursorPixelPosition > visibleBottom) {
+            // Content is below visible area, scroll it into view
+            textarea.scrollTop = cursorPixelPosition - textarea.clientHeight + lineHeight * 2;
+        }
+    }
+
+    /**
+     * Find and replace text while preserving scroll position
+     * @param searchText - Text to find
+     * @param replacement - Text to replace with
+     */
+    public replace(searchText: string, replacement: string) {
+        const searchStart = this.value.indexOf(searchText);
+        if (searchStart === -1) {
+            return; // Text not found
+        }
+        const searchEnd = searchStart + searchText.length;
+
+        // Preserve scroll position
+        const savedScrollTop = this.element.scrollTop;
+        fireInput(this.element, replacement, searchStart, searchEnd);
+        this.element.scrollTop = savedScrollTop;
     }
 
     /**
@@ -198,12 +242,16 @@ export class Cursor {
 
         const start = selectedLines[0].startsAt;
         const end = selectedLines[selectedLines.length - 1].endsAt;
-        const newValue =
-            this.value.slice(0, start) +
-            this.normalizeSelection(content, selectReplaced ? 'SELECT_ALL' : 'TO_END') +
-            this.value.slice(end);
 
-        this.setValue(newValue);
+        // PATCH: Use surgical insertion instead of setValue to avoid scroll jumps
+        const data = this.execRaw(this.normalizeSelection(content, selectReplaced ? 'SELECT_ALL' : 'TO_END'));
+        fireInput(this.element, data.text, start, end);
+
+        // Set cursor position after replaced text
+        if (data.selectionStart !== null && data.selectionEnd !== null) {
+            this.element.selectionStart = start + data.selectionStart;
+            this.element.selectionEnd = start + data.selectionEnd;
+        }
     }
 
     /**
@@ -219,12 +267,27 @@ export class Cursor {
         const start = line.startsAt;
         const end = line.endsAt;
         if (content === null) {
-            // line should be removed
-            this.setValue(this.value.slice(0, start - 1) + MARKER + this.value.slice(end));
+            // PATCH: line should be removed - use surgical deletion
+            const data = this.execRaw('');
+            // Remove from start-1 (including newline) to end
+            fireInput(this.element, data.text, start - 1, end);
+            // Set cursor position
+            if (data.selectionStart !== null) {
+                this.element.selectionStart = start - 1 + data.selectionStart;
+                this.element.selectionEnd = start - 1 + data.selectionStart;
+            }
             return;
         }
-        const newValue = this.value.slice(0, start) + this.normalizeSelection(content) + this.value.slice(end);
-        this.setValue(newValue);
+
+        // PATCH: Use surgical insertion instead of setValue
+        const data = this.execRaw(this.normalizeSelection(content));
+        fireInput(this.element, data.text, start, end);
+
+        // Set cursor position after replaced text
+        if (data.selectionStart !== null && data.selectionEnd !== null) {
+            this.element.selectionStart = start + data.selectionStart;
+            this.element.selectionEnd = start + data.selectionEnd;
+        }
     }
 
     /**
@@ -238,30 +301,31 @@ export class Cursor {
         const end = this.selection?.selectionEnd ?? this.position.cursorAt;
 
         if (this.isSelectedWrappedWith(markup) && unwrap) {
-            const content = [
-                text.slice(0, start - prefix.length),
-                MARKER,
-                text.slice(start, end),
-                MARKER,
-                text.slice(end + suffix.length),
-            ].join('');
+            // PATCH: Unwrap - use surgical replacement with MARKERs for cursor positioning
+            const unwrappedContent = MARKER + text.slice(start, end) + MARKER;
+            const data = this.execRaw(unwrappedContent);
+            // Replace from (start - prefix.length) to (end + suffix.length)
+            fireInput(this.element, data.text, start - prefix.length, end + suffix.length);
 
-            this.setValue(content);
+            // Set cursor position
+            if (data.selectionStart !== null && data.selectionEnd !== null) {
+                const offset = start - prefix.length;
+                this.element.selectionStart = offset + data.selectionStart;
+                this.element.selectionEnd = offset + data.selectionEnd;
+            }
             return;
         }
 
-        const content = [
-            //
-            text.slice(0, start),
-            prefix,
-            MARKER,
-            text.slice(start, end) || placeholder,
-            MARKER,
-            suffix,
-            text.slice(end),
-        ].join('');
+        // PATCH: Wrap - use surgical replacement with MARKERs for cursor positioning
+        const wrappedContent = prefix + MARKER + (text.slice(start, end) || placeholder) + MARKER + suffix;
+        const data = this.execRaw(wrappedContent);
+        fireInput(this.element, data.text, start, end);
 
-        this.setValue(content);
+        // Set cursor position
+        if (data.selectionStart !== null && data.selectionEnd !== null) {
+            this.element.selectionStart = start + data.selectionStart;
+            this.element.selectionEnd = start + data.selectionEnd;
+        }
     }
 
     private isSelectedWrappedWith(markup: string | [string, string]) {
