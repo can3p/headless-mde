@@ -176,9 +176,9 @@ export class Cursor {
         }
 
         // Set cursor position after inserted text
-        if (data.selectionStart !== null && data.selectionEnd !== null) {
+        if (data.selectionStart !== null) {
             this.element.selectionStart = cursorAt + data.selectionStart;
-            this.element.selectionEnd = cursorAt + data.selectionEnd;
+            this.element.selectionEnd = cursorAt + (data.selectionEnd ?? data.selectionStart);
         }
     }
 
