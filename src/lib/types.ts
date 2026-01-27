@@ -4,7 +4,6 @@ import { ComponentPropsWithoutRef, ForwardRefExoticComponent, ReactElement, RefA
 /** https://github.com/Microsoft/TypeScript/issues/29729 */
 export type LiteralUnion<T extends U, U = string> = T | (Pick<U, never> & { _?: never });
 
-type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 export const BUILT_IN_COMMANDS = [

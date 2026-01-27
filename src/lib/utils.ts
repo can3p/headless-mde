@@ -109,9 +109,7 @@ export const getIncrementedOrderedListPrefix = (prefix: string) => {
     return `${parts.slice(0, -1).join('.')}.${currentCount + 1}.`;
 };
 
-export const isRefObject = <TAttributes extends any>(
-    ref: React.Ref<TAttributes>,
-): ref is MutableRefObject<TAttributes> => {
+export const isRefObject = <T>(ref: React.Ref<T>): ref is MutableRefObject<T> => {
     return ref !== null && typeof ref === 'object';
 };
 

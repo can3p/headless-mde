@@ -343,13 +343,7 @@ export class Cursor {
     }
 
     public select(options: SelectRange | SelectRelative) {
-        const isRange = (opt: SelectRange | SelectRelative): opt is SelectRange => {
-            return (
-                Object.prototype.hasOwnProperty.call(opt, 'start') && Object.prototype.hasOwnProperty.call(opt, 'end')
-            );
-        };
-
-        if (isRange(options)) {
+        if ('start' in options && 'end' in options) {
             this.element.setSelectionRange(options.start, options.end);
         } else {
             this.element.setSelectionRange(

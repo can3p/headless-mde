@@ -89,7 +89,7 @@ const isKeyboardArg = <T>(arg: T): arg is T & { __keyboard: true; keyEvent: Keyb
 const mergedCommandsList = (customCommands: Command[] = []) => {
     const commands = [...buildInCommands];
 
-    customCommands?.forEach((command) => {
+    customCommands.forEach((command) => {
         if (BUILT_IN_COMMANDS.includes(command.name as any)) {
             const commandIndex = buildInCommands.findIndex((x) => x.name === command.name)!;
 
