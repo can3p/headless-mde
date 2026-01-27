@@ -187,7 +187,7 @@ export class Cursor {
      * @param forceManual - Force manual value manipulation instead of execCommand (for Firefox file inputs)
      */
     public insertAndScrollIntoView(content: string) {
-        var cursorPositionBefore = this.element.selectionStart;
+        const cursorPositionBefore = this.element.selectionStart;
         this.insert(content);
 
         // Scroll into view if inserted content is below visible area
@@ -343,13 +343,7 @@ export class Cursor {
     }
 
     public select(options: SelectRange | SelectRelative) {
-        const isRange = (opt: SelectRange | SelectRelative): opt is SelectRange => {
-            return (
-                Object.prototype.hasOwnProperty.call(opt, 'start') && Object.prototype.hasOwnProperty.call(opt, 'end')
-            );
-        };
-
-        if (isRange(options)) {
+        if ('start' in options && 'end' in options) {
             this.element.setSelectionRange(options.start, options.end);
         } else {
             this.element.setSelectionRange(
