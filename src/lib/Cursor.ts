@@ -187,7 +187,7 @@ export class Cursor {
      * @param forceManual - Force manual value manipulation instead of execCommand (for Firefox file inputs)
      */
     public insertAndScrollIntoView(content: string) {
-        var cursorPositionBefore = this.element.selectionStart;
+        const cursorPositionBefore = this.element.selectionStart;
         this.insert(content);
 
         // Scroll into view if inserted content is below visible area

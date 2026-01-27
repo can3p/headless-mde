@@ -56,7 +56,7 @@ export function fireInput(
         input.contentEditable = 'true';
         try {
             isSuccess = document.execCommand('insertText', false, value);
-        } catch (e) {
+        } catch {
             isSuccess = false;
         }
         input.contentEditable = 'false';
@@ -67,7 +67,7 @@ export function fireInput(
         // Try to preserve undo/redo for IE/Edge
         try {
             document.execCommand('ms-beginUndoUnit');
-        } catch (e) {
+        } catch {
             // Ignore
         }
 
@@ -77,7 +77,7 @@ export function fireInput(
 
         try {
             document.execCommand('ms-endUndoUnit');
-        } catch (e) {
+        } catch {
             // Ignore
         }
 
@@ -142,7 +142,7 @@ export function escapeRegExp(str: string) {
 export const isURL = (value: unknown): value is string => {
     try {
         return typeof value === 'string' && Boolean(new URL(value));
-    } catch (error) {
+    } catch {
         return false;
     }
 };
