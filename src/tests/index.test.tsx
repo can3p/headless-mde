@@ -2,7 +2,20 @@ import React, { FC, useEffect, useRef, useState } from 'react';
 import TextareaMarkdown, { Command, CommandType, Cursor, TextareaMarkdownOptions, TextareaMarkdownRef } from '../lib';
 import { act, render } from '@testing-library/react';
 
-import { stripIndent } from 'common-tags';
+const stripIndent = (strings: TemplateStringsArray, ...values: unknown[]): string => {
+    const raw = strings.reduce((acc, str, i) => acc + str + (values[i] ?? ''), '');
+    const lines = raw.split('\n');
+    const minIndent = lines
+        .filter((line) => line.trim())
+        .reduce((min, line) => {
+            const indent = line.match(/^\s*/)?.[0].length ?? 0;
+            return Math.min(min, indent);
+        }, Infinity);
+    return lines
+        .map((line) => line.slice(minIndent === Infinity ? 0 : minIndent))
+        .join('\n')
+        .trim();
+};
 import userEvent from '@testing-library/user-event';
 
 type TestCase = {
