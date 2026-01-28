@@ -26,7 +26,7 @@ Essentially this library just provides the textarea Component. You can choose an
 
 ```tsx
 import React, { Fragment, useRef, useState } from 'react';
-import TextareaMarkdown, { TextareaMarkdownRef } from 'textarea-markdown-editor';
+import TextareaMarkdown, { TextareaMarkdownRef } from '@can3p/headless-mde';
 
 function App() {
     const [value, setValue] = useState('');
@@ -50,7 +50,7 @@ You can use custom textarea Component. Just wrap it with `TextareaMarkdown.Wrapp
 
 ```tsx
 import React, { useRef, useState } from 'react';
-import TextareaMarkdown, { TextareaMarkdownRef } from 'textarea-markdown-editor';
+import TextareaMarkdown, { TextareaMarkdownRef } from '@can3p/headless-mde';
 import TextareaAutosize from 'react-textarea-autosize';
 
 function App() {
@@ -73,7 +73,7 @@ You can specify or overwrite shortcuts for built-in commands or create your own
 
 ```tsx
 import React, { useRef, useState } from 'react';
-import TextareaMarkdown, { CommandHandler, TextareaMarkdownRef } from 'textarea-markdown-editor';
+import TextareaMarkdown, { CommandHandler, TextareaMarkdownRef } from '@can3p/headless-mde';
 
 /** Inserts 🙃 at the current position and select it */
 const emojiCommandHandler: CommandHandler = ({ cursor }) => {
@@ -115,10 +115,12 @@ function App() {
 ℹ️ [Mousetrap.js](https://craig.is/killing/mice) is used under the hood for shortcuts handling.
 It is great solution with simple and intuitive api. You can read more about combination in the documentation
 
-### `β` Usage without `react`
+### Usage without React
+
+For projects that don't use React, import from the headless entry point:
 
 ```js
-import { bootstrapTextareaMarkdown } from 'textarea-markdown-editor/dist/bootstrap';
+import { bootstrapTextareaMarkdown } from '@can3p/headless-mde/headless';
 
 const textarea = document.querySelector('textarea'); // element can be obtained from anywhere, this is just an example;
 
@@ -128,9 +130,7 @@ const { trigger, dispose } = bootstrapTextareaMarkdown(textarea, {
 });
 ```
 
-ℹ️ Checkout [sandbox example](https://codesandbox.io/s/vanila-textarea-markdown-editor-5q6bqb?file=/src/index.js)
-
-ℹ️ Although this is possible, this feature is more of a workaround, since the library was originally written to be used with react, your package manager probably will warn you about missing peer-dependencies
+ℹ️ The headless entry point has no React dependencies, so you won't get peer dependency warnings.
 
 ---
 
