@@ -138,7 +138,7 @@ export type TextareaMarkdownOptions = {
 };
 
 export const defaultTextareaMarkdownOptions: TextareaMarkdownOptions = {
-    preferredUnorderedListSyntax: '-',
+    preferredUnorderedListSyntax: '*',
     preferredBoldSyntax: '**',
     preferredItalicSyntax: '*',
 

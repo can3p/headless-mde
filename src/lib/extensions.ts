@@ -114,7 +114,11 @@ export const prefixWrappingExtension: Extension = (textarea, options) => {
 
     const buildInConfigs: PrefixWrappingConfig[] = [
         {
-            prefix: `${options.preferredUnorderedListSyntax} `,
+            prefixPattern: /[-*]\s+/,
+            prefix: (line) => {
+                const match = /^\s*([-*])\s+/.exec(line.text);
+                return match ? `${match[1]} ` : `${options.preferredUnorderedListSyntax} `;
+            },
             shouldBreakIfEmpty: true,
             shouldSaveIndent: true,
         },

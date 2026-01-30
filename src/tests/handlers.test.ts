@@ -108,11 +108,11 @@ describe('unorderedListCommandHandler', () => {
     it('should add unordered list prefix to current line', () => {
         const ctx = createContext('item', 0, 0);
         unorderedListCommandHandler(ctx);
-        expect(ctx.textarea.value).toBe('- item');
+        expect(ctx.textarea.value).toBe('* item');
     });
 
     it('should remove unordered list prefix if already present', () => {
-        const ctx = createContext('- item', 0, 0);
+        const ctx = createContext('* item', 0, 0);
         unorderedListCommandHandler(ctx);
         expect(ctx.textarea.value).toBe('item');
     });
@@ -120,7 +120,7 @@ describe('unorderedListCommandHandler', () => {
     it('should add prefix to multiple selected lines', () => {
         const ctx = createContext('one\ntwo\nthree', 0, 13);
         unorderedListCommandHandler(ctx);
-        expect(ctx.textarea.value).toBe('- one\n- two\n- three');
+        expect(ctx.textarea.value).toBe('* one\n* two\n* three');
     });
 });
 
