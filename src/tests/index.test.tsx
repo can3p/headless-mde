@@ -142,7 +142,7 @@ const testCases: TestCase[] = [
         description: 'should insert unordered list markup',
         commandName: 'unordered-list',
         input: `some item<>`,
-        expected: `- some item<>`,
+        expected: `* some item<>`,
     },
 
     // ! code-inline
@@ -400,6 +400,38 @@ const testCases: TestCase[] = [
         expected: stripIndent`
             1. option 1
             2. option 2
+            
+            <>`,
+    },
+
+    {
+        description: 'should wrap unordered-list with asterisk prefix',
+        input: stripIndent`
+            * option 1
+            * option 2
+            * option 3<>`,
+
+        act: () => userEvent.keyboard('{enter}'),
+
+        expected: stripIndent`
+            * option 1
+            * option 2
+            * option 3
+            * <>`,
+    },
+
+    {
+        description: 'should break wrap on empty unordered-list line with asterisk prefix',
+        input: stripIndent`
+            * option 1
+            * option 2
+            * <>`,
+
+        act: () => userEvent.keyboard('{enter}'),
+
+        expected: stripIndent`
+            * option 1
+            * option 2
             
             <>`,
     },
