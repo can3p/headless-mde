@@ -41,6 +41,6 @@ export default tseslint.config(
         },
     },
     {
-        ignores: ['dist/**', 'node_modules/**', 'sandbox/**', '*.config.js'],
+        ignores: ['dist/**', 'node_modules/**', 'sandbox/**', '*.config.js', '*.config.cjs'],
     },
 );
