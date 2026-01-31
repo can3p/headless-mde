@@ -4,6 +4,43 @@ This is a fork of https://github.com/Resetand/textarea-markdown-editor
 
 The aim is to trim fix some of the quirks with the scroll position, there will be breaking changes, no compatibility planned.
 
+## Differences from original
+
+### Features
+
+-  Use `*` by default, both types are supported on enter
+-  Textarea reacts reliably to text insertion, no need to invoke any magic to keep the scroll position
+
+### Code
+
+- No more CommmonJS, only ESM
+- Dependencies were updated, added tests for missing cases
+
+### Webpack end ESM
+
+In case Webpack is not happy with the imports from the package, you may need
+to define the exception in the webpack config:
+
+```
+  let config = {
+    // ....
+
+    // custom loaders configuration
+    module: {
+      rules: [
+        {
+          test: /\.m?js$/,
+          include: /node_modules\/@can3p\/headless-mde/,
+          resolve: {
+            fullySpecified: false,
+          },
+        },
+        // ..
+      ]
+    },
+  };
+```
+
 ---
 
 **Textarea Markdown** is a simple markdown editor using only `<textarea/>`. It extends textarea by adding formatting features like shortcuts, list-wrapping, invoked commands and other to make user experience better 🙃
