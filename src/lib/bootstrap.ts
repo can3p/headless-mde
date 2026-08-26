@@ -7,6 +7,7 @@ import {
     linkPasteExtension,
     prefixWrappingExtension,
     orderedListAutoCorrectExtension,
+    emDashExtension,
 } from './extensions';
 import {
     Command,
@@ -67,6 +68,7 @@ export const bootstrapTextareaMarkdown = (textarea: HTMLTextAreaElement, config:
         options.enablePrefixWrappingExtension && prefixWrappingExtension(textarea, options),
         options.enableProperLineRemoveBehaviorExtension && properLineRemoveBehaviorExtension(textarea, options),
         options.enableOrderedListAutoCorrectExtension && orderedListAutoCorrectExtension(textarea, options),
+        options.enableEmDashExtension && emDashExtension(textarea, options),
     ];
 
     // unsubscribe from all listeners

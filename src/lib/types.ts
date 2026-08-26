@@ -94,6 +94,8 @@ export type TextareaMarkdownOptions = {
      * */
     enableOrderedListAutoCorrectExtension: boolean;
 
+    enableEmDashExtension: boolean;
+
     /** Array of custom prefixes, that need to be wrapped. (Will not work with `enablePrefixWrappingExtension:false`) */
     customPrefixWrapping: (PrefixWrappingConfig | string)[];
 
@@ -147,6 +149,7 @@ export const defaultTextareaMarkdownOptions: TextareaMarkdownOptions = {
     enablePrefixWrappingExtension: true,
     enableProperLineRemoveBehaviorExtension: true,
     enableOrderedListAutoCorrectExtension: false,
+    enableEmDashExtension: true,
     customPrefixWrapping: [],
 
     boldPlaceholder: 'bold',

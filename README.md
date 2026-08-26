@@ -55,6 +55,7 @@ Essentially this library just provides the textarea Component. You can choose an
 
 -   Lists wrapping
 -   Auto formatting pasted links
+-   Converts `-- ` to `— ` outside fenced code blocks
 -   Indent tabulation
 -   Keyboard shortcuts handling
 -   17 built-in customizable commands
@@ -261,9 +262,11 @@ export type CommandHandlerContext = {
 | :------------------------------------------ | :------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------- |
 | **preferredBoldSyntax**                     | `"**"` \| `"__"`                            | Preferred bold wrap syntax `default: '**'`                                                                                               |
 | **preferredItalicSyntax**                   | `"*"` \| `"_"`                              | Preferred italic wrap syntax `default: '*'`                                                                                              |
-| **preferredUnorderedListSyntax**            | `"-"` \| `"*"` \| `"+"`                     | Preferred unordered list prefix `default: '-'`                                                                                           |
+| **preferredUnorderedListSyntax**            | `"-"` \| `"*"` \| `"+"`                     | Preferred unordered list prefix `default: '*'`                                                                                           |
+| **enableEmDashExtension**                   | `boolean`                                   | Converts two dashes followed by a space into an em dash outside fenced code blocks `default:true`                                        |
 | **enableIndentExtension**                   | `boolean`                                   | Will handle `tab` and `shift+tab` keystrokes, on which will insert/remove indentation instead of the default behavior `default:true`     |
 | **enableLinkPasteExtension**                | `boolean`                                   | Will handle `paste` event, on which will wrap pasted with link/image markup if pasted is URL `default:true`                              |
+| **enableOrderedListAutoCorrectExtension**   | `boolean`                                   | Will autocorrect invalid ordered list patterns when `enter` is pressed `default:false`                                                   |
 | **enablePrefixWrappingExtension**           | `boolean`                                   | Will handle `enter` keystroke, on which will wrap current list sequence if needed `default:true`                                         |
 | **enableProperLineRemoveBehaviorExtension** | `boolean`                                   | Will handle `command/ctrl+backspace` keystrokes, on which will remove only a current line instead of the default behavior `default:true` |
 | **customPrefixWrapping**                    | (`PrefixWrappingConfig` \| `string`)[]      | Array of custom prefixes, that need to be wrapped. (Will not work with `enablePrefixWrappingExtension:false`)                            |

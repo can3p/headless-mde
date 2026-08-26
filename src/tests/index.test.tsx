@@ -295,6 +295,21 @@ const testCases: TestCase[] = [
 
     // ! Extension: list-wrapping
     {
+        description: 'should not wrap an unordered-list inside a fenced code block',
+        input: stripIndent`
+            ${'```'}
+            - option 1<>
+            ${'```'}`,
+
+        act: () => userEvent.keyboard('{enter}'),
+
+        expected: stripIndent`
+            ${'```'}
+            - option 1
+            <>
+            ${'```'}`,
+    },
+    {
         description: 'should wrap unordered-list',
         input: stripIndent`
             - option 1
@@ -541,6 +556,38 @@ const testCases: TestCase[] = [
                 'https://xxxxx999xxxxxxxxx99x9x9xx9999xxxx9x9x999xx9x9x-dev.s3.eu-west-2.amazonaws.com/public/xxxxxx99-9xxx-xxxx-9xx9-x9x9xxx999xx',
             ),
         expected: `https://xxxxx999xxxxxxxxx99x9x9xx9999xxxx9x9x999xx9x9x-dev.s3.eu-west-2.amazonaws.com/public/xxxxxx99-9xxx-xxxx-9xx9-x9x9xxx999xx<>`,
+    },
+
+    {
+        description: 'should replace two dashes with an em dash when space is typed',
+        input: 'some text --<>',
+        act: () => userEvent.keyboard(' '),
+        expected: 'some text — <>',
+    },
+    {
+        description: 'should preserve two dashes when em dash extension is disabled',
+        options: { enableEmDashExtension: false },
+        input: 'some text --<>',
+        act: () => userEvent.keyboard(' '),
+        expected: 'some text -- <>',
+    },
+    {
+        description: 'should preserve dashes that are not immediately before the cursor',
+        input: 'some -- text<>',
+        act: () => userEvent.keyboard(' '),
+        expected: 'some -- text <>',
+    },
+    {
+        description: 'should preserve two dashes inside a fenced code block',
+        input: stripIndent`
+            ${'```'}
+            const value = --<>
+            ${'```'}`,
+        act: () => userEvent.keyboard(' '),
+        expected: stripIndent`
+            ${'```'}
+            const value = -- <>
+            ${'```'}`,
     },
 
     // ! Extension: list-wrapping
