@@ -295,6 +295,21 @@ const testCases: TestCase[] = [
 
     // ! Extension: list-wrapping
     {
+        description: 'should not wrap an unordered-list inside a fenced code block',
+        input: stripIndent`
+            ${'```'}
+            - option 1<>
+            ${'```'}`,
+
+        act: () => userEvent.keyboard('{enter}'),
+
+        expected: stripIndent`
+            ${'```'}
+            - option 1
+            <>
+            ${'```'}`,
+    },
+    {
         description: 'should wrap unordered-list',
         input: stripIndent`
             - option 1
@@ -554,6 +569,18 @@ const testCases: TestCase[] = [
         input: 'some -- text<>',
         act: () => userEvent.keyboard(' '),
         expected: 'some -- text <>',
+    },
+    {
+        description: 'should preserve two dashes inside a fenced code block',
+        input: stripIndent`
+            ${'```'}
+            const value = --<>
+            ${'```'}`,
+        act: () => userEvent.keyboard(' '),
+        expected: stripIndent`
+            ${'```'}
+            const value = -- <>
+            ${'```'}`,
     },
 
     // ! Extension: list-wrapping

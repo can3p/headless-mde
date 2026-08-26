@@ -139,6 +139,33 @@ export function escapeRegExp(str: string) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
+export const isInsideFencedCodeBlock = (value: string, cursorAt: number) => {
+    let fence: { character: string; length: number } | null = null;
+
+    for (const line of value.slice(0, cursorAt).split('\n')) {
+        if (!fence) {
+            const openingFence = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+            if (openingFence) {
+                fence = { character: openingFence[0], length: openingFence.length };
+            }
+            continue;
+        }
+
+        const { character: fenceCharacter, length: fenceLength } = fence;
+        const indentation = line.length - line.trimStart().length;
+        const closingFence = line.trim();
+        if (
+            indentation <= 3 &&
+            closingFence.length >= fenceLength &&
+            Array.from(closingFence).every((character) => character === fenceCharacter)
+        ) {
+            fence = null;
+        }
+    }
+
+    return fence !== null;
+};
+
 export const isURL = (value: unknown): value is string => {
     try {
         return typeof value === 'string' && Boolean(new URL(value));

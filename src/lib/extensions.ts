@@ -1,5 +1,13 @@
 import { Extension, PrefixWrappingConfig } from './types';
-import { escapeRegExp, getIncrementedOrderedListPrefix, isBtwOrEq, isImageURL, isURL, metaCombination } from './utils';
+import {
+    escapeRegExp,
+    getIncrementedOrderedListPrefix,
+    isBtwOrEq,
+    isImageURL,
+    isInsideFencedCodeBlock,
+    isURL,
+    metaCombination,
+} from './utils';
 
 import { Cursor } from './Cursor';
 import { KeyboardShortcuts } from './keyboard';
@@ -134,7 +142,7 @@ export const prefixWrappingExtension: Extension = (textarea, options) => {
     const configs = [...customConfigs, ...buildInConfigs];
 
     const keydownListener = (event: KeyboardEvent) => {
-        if (event.code !== 'Enter') {
+        if (event.code !== 'Enter' || isInsideFencedCodeBlock(cursor.value, cursor.position.cursorAt)) {
             return;
         }
 
@@ -198,7 +206,7 @@ export const emDashExtension: Extension = (textarea) => {
         }
 
         const cursorAt = cursor.position.cursorAt;
-        if (cursor.value.slice(cursorAt - 2, cursorAt) !== '--') {
+        if (cursor.value.slice(cursorAt - 2, cursorAt) !== '--' || isInsideFencedCodeBlock(cursor.value, cursorAt)) {
             return;
         }
 
