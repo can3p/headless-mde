@@ -536,6 +536,26 @@ const testCases: TestCase[] = [
         expected: `https://xxxxx999xxxxxxxxx99x9x9xx9999xxxx9x9x999xx9x9x-dev.s3.eu-west-2.amazonaws.com/public/xxxxxx99-9xxx-xxxx-9xx9-x9x9xxx999xx<>`,
     },
 
+    {
+        description: 'should replace two dashes with an em dash when space is typed',
+        input: 'some text --<>',
+        act: () => userEvent.keyboard(' '),
+        expected: 'some text — <>',
+    },
+    {
+        description: 'should preserve two dashes when em dash extension is disabled',
+        options: { enableEmDashExtension: false },
+        input: 'some text --<>',
+        act: () => userEvent.keyboard(' '),
+        expected: 'some text -- <>',
+    },
+    {
+        description: 'should preserve dashes that are not immediately before the cursor',
+        input: 'some -- text<>',
+        act: () => userEvent.keyboard(' '),
+        expected: 'some -- text <>',
+    },
+
     // ! Extension: list-wrapping
     {
         options: { enableOrderedListAutoCorrectExtension: true },
