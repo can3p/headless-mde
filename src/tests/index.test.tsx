@@ -224,11 +224,8 @@ const testCases: TestCase[] = [
             Qui ab sed sunt voluptate?
             >
         `,
-        expected: stripIndent`
-            &gt <Lorem ipsum dolor sit amet consectetur adipisicing elit. 
-            Qui ab sed sunt voluptate?
-            >
-        `,
+        // the line after the selection end is not quoted
+        expected: '<&gt Lorem ipsum dolor sit amet consectetur adipisicing elit. \n&gt Qui ab sed sunt voluptate?>\n',
     },
 
     // ! strike-through

@@ -255,8 +255,21 @@ export class Cursor {
     }
 
     /**
-     * TODO
-     * replace
+     * Replace the text between `from` and `to` with `content`.
+     * Place the caret or selection with `Cursor.MARKER`, the caret goes to the end of the content by default.
+     */
+    public replaceRange(from: number, to: number, content: string) {
+        const data = this.execRaw(this.normalizeSelection(content));
+        fireInput(this.element, data.text, from, to);
+
+        if (data.selectionStart !== null) {
+            this.element.selectionStart = from + data.selectionStart;
+            this.element.selectionEnd = from + (data.selectionEnd ?? data.selectionStart);
+        }
+    }
+
+    /**
+     * Replace a single line, `null` removes the line
      */
     public replaceLine(lineNumber: number, content: string | null) {
         const line = this.lineAt(lineNumber);

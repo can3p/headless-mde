@@ -142,7 +142,10 @@ export function escapeRegExp(str: string) {
 export const isInsideFencedCodeBlock = (value: string, cursorAt: number) => {
     let fence: { character: string; length: number } | null = null;
 
-    for (const line of value.slice(0, cursorAt).split('\n')) {
+    for (const quotedLine of value.slice(0, cursorAt).split('\n')) {
+        // a fence inside a blockquote opens or closes after the quote markers
+        const line = splitQuotePrefix(quotedLine).rest;
+
         if (!fence) {
             const openingFence = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
             if (openingFence) {
@@ -177,3 +180,33 @@ export const isURL = (value: unknown): value is string => {
 export const isImageURL = (value: unknown): value is string => {
     return isURL(value) && value.match(/\.(jpeg|jpg|gif|png)$/) !== null;
 };
+
+const QUOTE_PREFIX_RE = /^(?: {0,3}>[ \t]?)+/;
+
+export type QuoteParts = {
+    /** Blockquote markers at the start of the line, including the space after the last one, e.g. `> > ` */
+    quote: string;
+    /** Line content after the markers */
+    rest: string;
+    /** Nesting level, 0 when the line is not quoted */
+    depth: number;
+};
+
+/** Splits a line into its blockquote markers and the content after them */
+export const splitQuotePrefix = (text: string): QuoteParts => {
+    const quote = QUOTE_PREFIX_RE.exec(text)?.[0] ?? '';
+    return { quote, rest: text.slice(quote.length), depth: (quote.match(/>/g) ?? []).length };
+};
+
+/** Markers for a quoted line with content: always ends with a single space, `>>` becomes `>> ` */
+export const quoteContinuation = (quote: string) => (quote === '' ? '' : quote.replace(/[ \t]*$/, ' '));
+
+/** Markers for a quoted line without content (a paragraph break inside the quote): no trailing space */
+export const quoteBlank = (quote: string) => quote.replace(/[ \t]*$/, '');
+
+/** Markers with the innermost level removed: `> > ` becomes `>`, `> ` becomes `` */
+export const quoteOuter = (quote: string) => quote.replace(/ {0,3}>[ \t]?$/, '');
+
+/** Markers for a line with or without content */
+export const quotePrefix = (quote: string, hasContent: boolean) =>
+    hasContent ? quoteContinuation(quote) : quoteBlank(quote);
