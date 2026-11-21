@@ -1,5 +1,8 @@
 # Textarea Markdown
 
+**[Try it in the playground](https://can3p.github.io/headless-mde/)**, where every extension can be switched on
+and off. How the editor behaves, key by key, is described in [docs/behavior.md](docs/behavior.md).
+
 This is a fork of https://github.com/Resetand/textarea-markdown-editor
 
 The aim is to trim fix some of the quirks with the scroll position, there will be breaking changes, no compatibility planned.
@@ -337,6 +340,18 @@ Just create a GitHub release with a version tag (e.g., `v1.0.0`). The workflow w
 5. Publish to npm
 
 No manual version bumping required! The release tag will always point to the commit with the correct version in `package.json`.
+
+### Project site
+
+The site at https://can3p.github.io/headless-mde/ is built from `site/` (the playground) and `docs/` (the
+getting started guide and the behavior reference), using the library sources of the release.
+
+- `npm run start-site` builds it and serves it at http://127.0.0.1:4174/; `npm run build:site` only builds it
+  into `site/dist`.
+- The release workflow deploys it after publishing to npm (`.github/workflows/site.yaml`). It can also be
+  deployed by hand from the Actions tab.
+- One-time setup: in the repository settings, set Pages → Source to "GitHub Actions", and under Environments →
+  `github-pages` add a deployment rule for tags matching `v*`, because releases deploy from their tag.
 
 ## Acknowledgements
 

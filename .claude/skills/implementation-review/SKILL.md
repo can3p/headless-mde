@@ -35,6 +35,8 @@ behavior (the plan's table, or the PR description), never your reasoning.
 >    order in `bootstrap.ts`, Shift and other modifiers, IME, undo, the React component, and what jsdom
 >    can't run (`execCommand`, scroll, undo; probe it in `e2e/`). Does the change alter behavior for
 >    users who did not opt in to a new option? That is a regression and ranks first.
+>    Is a new or changed behavior described in `docs/behavior.md`, and a new option or command in the
+>    README and `site/catalog.ts`?
 > 3. **Blockers**: what must be fixed before merge, and what can wait? Rank them.
 > 4. **Spaghetti**: does the change spread conditionals across files or grow functions with many
 >    branches? Name the worst spots and say whether they are acceptable.

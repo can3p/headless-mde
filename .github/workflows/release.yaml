@@ -54,3 +54,14 @@ jobs:
 
       - name: Publish to npm
         run: npm publish --provenance --access public
+
+  site:
+    needs: publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/site.yaml
+    with:
+      # the publish job moved the tag to the version bump commit
+      ref: refs/tags/${{ github.ref_name }}
