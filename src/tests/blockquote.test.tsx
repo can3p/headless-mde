@@ -28,9 +28,6 @@ const run = (cases: TestCase[]) => {
 
                 useEffect(() => {
                     ref.current?.setSelectionRange(inputData.selectionStart, inputData.selectionEnd);
-                    if (c.commandName) {
-                        ref.current?.trigger?.(c.commandName);
-                    }
                     // eslint-disable-next-line react-hooks/exhaustive-deps
                 }, []);
 
@@ -47,6 +44,11 @@ const run = (cases: TestCase[]) => {
             const view = render(<Example />);
             const textarea = view.container.querySelector('textarea')!;
             textarea.focus();
+
+            // like a toolbar click: outside React's render and effects
+            if (c.commandName) {
+                await act(async () => (textarea as TextareaMarkdownRef).trigger(c.commandName!));
+            }
 
             await act(async () => {
                 await c.act?.();

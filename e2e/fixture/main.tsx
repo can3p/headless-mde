@@ -7,6 +7,7 @@
  * - `commands=<json>`: custom commands without handlers, each records its calls in `window.calls`
  * - `react=1`: render the React component in `StrictMode` instead of calling `bootstrapTextareaMarkdown`
  * - `wrap=1`: a textarea with wrapped lines, padding and a border
+ * - `shadow=1`: the textarea in an open shadow root, as in a web component
  */
 import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -75,7 +76,12 @@ if (params.get('react') === '1') {
 } else {
     const textarea = document.createElement('textarea');
     textarea.id = 'editor';
-    root.append(textarea);
+    if (params.get('shadow') === '1') {
+        const shadow = root.attachShadow({ mode: 'open' });
+        shadow.append(document.querySelector('style')!.cloneNode(true), textarea);
+    } else {
+        root.append(textarea);
+    }
     const { trigger, cursor } = bootstrapTextareaMarkdown(textarea, { options, commands });
     window.editor = { trigger, cursor };
 }

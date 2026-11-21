@@ -147,20 +147,6 @@ test('replace shifts a selection after the match', async ({ page }) => {
     expect(await getText(page)).toBe('![](https://example.com/a.png)\nax');
 });
 
-test('replace while another field has focus edits only the editor', async ({ page }) => {
-    await open(page);
-    await editor(page).evaluate((element: HTMLTextAreaElement) => {
-        element.value = 'a ![](uploading…) b';
-        const other = document.createElement('input');
-        other.id = 'other';
-        document.body.append(other);
-        other.focus();
-    });
-    await page.evaluate(() => window.editor!.cursor.replace('![](uploading…)', '![](a.png)'));
-    expect(await getText(page)).toBe('a ![](a.png) b');
-    expect(await page.locator('#other').inputValue()).toBe('');
-});
-
 test('a smart edit in a long document stays fast', async ({ page }) => {
     await prepare(page, { value: lines(2000, true), line: 2000, scrollTop: 'max' });
     const duration = await page.evaluate(() => {

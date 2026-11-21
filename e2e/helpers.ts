@@ -10,6 +10,8 @@ export type OpenConfig = {
     react?: boolean;
     /** wrapped lines, padding and a border instead of the fixed `pre` layout */
     wrap?: boolean;
+    /** the textarea in an open shadow root (not with `react`) */
+    shadow?: boolean;
 };
 
 export const editor = (page: Page) => page.locator('#editor');
@@ -23,6 +25,9 @@ export const open = async (page: Page, config: OpenConfig = {}) => {
     }
     if (config.wrap) {
         query.set('wrap', '1');
+    }
+    if (config.shadow) {
+        query.set('shadow', '1');
     }
     await page.goto(`/index.html?${query}`);
     await page.waitForFunction(() => Boolean(window.editor));

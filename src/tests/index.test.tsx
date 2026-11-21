@@ -694,10 +694,6 @@ describe('md formatting common cases', () => {
 
                 useEffect(() => {
                     ref.current?.setSelectionRange(inputData.selectionStart, inputData.selectionEnd);
-
-                    if (c.commandName) {
-                        ref.current?.trigger?.(c.commandName);
-                    }
                     // eslint-disable-next-line react-hooks/exhaustive-deps
                 }, []);
 
@@ -716,6 +712,11 @@ describe('md formatting common cases', () => {
             const textarea = view.container.querySelector('textarea')!;
 
             textarea.focus();
+
+            // like a toolbar click: outside React's render and effects
+            if (c.commandName) {
+                await act(async () => (textarea as TextareaMarkdownRef).trigger(c.commandName!));
+            }
 
             await act(() => c.act?.(textarea));
 

@@ -62,39 +62,29 @@ export function fireInput(
     let isSuccess = false;
 
     // a native edit keeps the undo history. `execCommand` edits the focused element, so only use it when
-    // that's the input. A focused textarea needs no contentEditable trick (that made WebKit scroll to the
-    // end of the text); Firefox supports it since version 89.
-    if (document.execCommand && document.activeElement === input) {
+    // that's the input (in its own document or shadow root). A focused textarea needs no contentEditable
+    // trick (that made WebKit scroll to the end of the text); Firefox supports it since version 89.
+    const ownerDocument = input.ownerDocument;
+    const root = input.getRootNode() as Document | ShadowRoot;
+    if (ownerDocument.execCommand && root.activeElement === input) {
         try {
-            isSuccess = document.execCommand('insertText', false, value);
+            isSuccess = ownerDocument.execCommand('insertText', false, value);
         } catch {
             isSuccess = false;
         }
     }
 
-    // Fallback: manual value manipulation
+    // Fallback (no execCommand, as in jsdom, or the input isn't focused): set the value, without undo.
+    // The prototype's setter bypasses the value tracker of React, so a controlled component's onChange fires.
     if (!isSuccess) {
-        // Try to preserve undo/redo for IE/Edge
-        try {
-            document.execCommand('ms-beginUndoUnit');
-        } catch {
-            // Ignore
-        }
-
-        // Manually replace the selected range
         const newValue = input.value.slice(0, start) + value + input.value.slice(end);
-        input.value = newValue;
-
-        try {
-            document.execCommand('ms-endUndoUnit');
-        } catch {
-            // Ignore
+        const setValue = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value')?.set;
+        if (setValue) {
+            setValue.call(input, newValue);
+        } else {
+            input.value = newValue;
         }
-
-        // Manually dispatch input event
-        const event = document.createEvent('UIEvent');
-        event.initEvent('input', true, false);
-        input.dispatchEvent(event);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     // PATCH: Explicitly set cursor position after insertion (GitHub's approach)

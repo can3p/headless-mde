@@ -37,7 +37,9 @@ const MIRRORED_STYLES = [
  * textarea's styles, so it works with wrapped lines, padding and any font.
  */
 export const getCaretCoordinates = (textarea: HTMLTextAreaElement, position: number) => {
-    const style = window.getComputedStyle(textarea);
+    // the textarea's own document: it may live in an iframe
+    const document = textarea.ownerDocument;
+    const style = document.defaultView!.getComputedStyle(textarea);
     const mirror = document.createElement('div');
 
     MIRRORED_STYLES.forEach((property) => {
