@@ -1,7 +1,7 @@
 import { Cursor, Line } from './Cursor';
 import {
-    getIncrementedOrderedListPrefix,
     getLines,
+    OpenFence,
     openFenceAt,
     QuoteParts,
     quoteBlank,
@@ -24,8 +24,6 @@ export type TextEdit = {
 
 const M = Cursor.MARKER;
 
-const LIST_ITEM_RE = /^(\s*)([-*+]|\d+(?:\.\d+)?[.)])(\s+)(.*)$/;
-
 type QuotedCaret = {
     line: Line;
     /** Caret offset inside the line */
@@ -42,7 +40,12 @@ type QuotedCaret = {
  * Inside a code block only the markers of the quote holding the block count, the rest is code:
  * in a code block outside any quote there are no markers at all.
  */
-const quotedCaretAt = (value: string, start: number, end: number): QuotedCaret | null => {
+const quotedCaretAt = (
+    value: string,
+    start: number,
+    end: number,
+    fence: OpenFence | null = openFenceAt(value, start),
+): QuotedCaret | null => {
     if (start !== end) {
         return null;
     }
@@ -50,7 +53,6 @@ const quotedCaretAt = (value: string, start: number, end: number): QuotedCaret |
     const lines = getLines(value);
     const index = lines.findIndex((line) => start >= line.startsAt && start <= line.endsAt);
     const line = lines[index];
-    const fence = openFenceAt(value, start);
     const parts = fence ? takeQuoteLevels(line.text, fence.depth) : splitQuotePrefix(line.text);
     const column = start - line.startsAt;
 
@@ -66,17 +68,6 @@ const quotedCaretAt = (value: string, start: number, end: number): QuotedCaret |
         prev: prevLine && { line: prevLine, parts: splitQuotePrefix(prevLine.text) },
         inCode: fence !== null,
     };
-};
-
-/** The marker of the next list item: `-` stays `-`, `1.` becomes `2.`, `1)` becomes `2)` */
-const nextListMarker = (marker: string) => {
-    if (/^[-*+]$/.test(marker)) {
-        return marker;
-    }
-    if (marker.endsWith(')')) {
-        return `${parseInt(marker) + 1})`;
-    }
-    return getIncrementedOrderedListPrefix(marker);
 };
 
 /** Enter on a quoted line without content */
@@ -101,41 +92,21 @@ const enterOnEmptyQuoteLine = ({ line, parts, prev }: QuotedCaret): TextEdit => 
     return { from: line.startsAt, to: line.endsAt, text: `${quoteBlank(parts.quote)}\n${quoteContinuation(parts.quote)}${M}` };
 };
 
-/** Enter on a list item inside a quote, `null` when the line is not a list item */
-const enterOnQuotedListItem = (caret: QuotedCaret, start: number): TextEdit | null => {
-    const { line, column, parts } = caret;
-    const item = LIST_ITEM_RE.exec(parts.rest);
-    if (!item) {
-        return null;
-    }
-
-    const [, indent, marker, spacing, content] = item;
-    const contentColumn = parts.quote.length + indent.length + marker.length + spacing.length;
-    if (column < contentColumn) {
-        // caret before the content: the marker moves to the new line with the text after the caret
-        return null;
-    }
-
-    const cont = quoteContinuation(parts.quote);
-    if (content.trim() === '') {
-        // empty list item: leave the list, stay in the quote
-        return { from: line.startsAt, to: line.endsAt, text: cont + M };
-    }
-
-    return { from: start, to: start, text: `\n${cont}${indent}${nextListMarker(marker)} ${M}` };
-};
-
 /**
- * Enter on a quoted line:
- * - continues the quote at the same depth, and a list inside it
- * - on an empty list item leaves the list but stays in the quote
+ * Enter on a quoted line (lists inside quotes are the list rule's, see `enter.ts`):
+ * - continues the quote at the same depth
  * - on an empty quote line after text makes a paragraph break (`>` line)
  * - on an empty quote line after a paragraph break leaves one quote level
  * - on an empty quote line that starts the quote removes the markers
  * - inside a code block in the quote only continues the quote
  */
-export const quoteEnter = (value: string, start: number, end: number): TextEdit | null => {
-    const caret = quotedCaretAt(value, start, end);
+export const quoteEnter = (
+    value: string,
+    start: number,
+    end: number,
+    fence: OpenFence | null = openFenceAt(value, start),
+): TextEdit | null => {
+    const caret = quotedCaretAt(value, start, end, fence);
     if (!caret) {
         return null;
     }
@@ -148,7 +119,7 @@ export const quoteEnter = (value: string, start: number, end: number): TextEdit 
     if (caret.parts.rest.trim() === '') {
         return enterOnEmptyQuoteLine(caret);
     }
-    return enterOnQuotedListItem(caret, start) ?? continueQuote;
+    return continueQuote;
 };
 
 /**

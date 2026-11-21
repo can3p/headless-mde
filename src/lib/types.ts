@@ -83,11 +83,14 @@ export type TextareaMarkdownOptions = {
     /** Will handle `paste` event, on which will wrap pasted with link or image markup if pasted is URL `default:true` */
     enableLinkPasteExtension: boolean;
 
-    /** Will handle `enter` keystroke, on which will wrap current list sequence to a new line if needed `default:true` */
+    /**
+     * Will handle `enter` keystroke: continues lists (`-`, `*`, `+`, `1.`, `1.1.`, `1)`, task checkboxes, inside
+     * quotes too) and `customPrefixWrapping`, an empty item leaves the list `default:true`
+     */
     enablePrefixWrappingExtension: boolean;
 
     /**
-     * Will handle `enter` keystroke, on which will autocorrect invalid ordered list patterns `default:false`
+     * Will handle `enter` keystroke, on which will autocorrect `1)` ordered list markers to `1.` `default:false`
      * @example
      * 1) some text -> 1. some text
      * 1.1) some text -> 1.1. some text

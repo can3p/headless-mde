@@ -615,6 +615,37 @@ const testCases: TestCase[] = [
     },
 
     {
+        options: { enableOrderedListAutoCorrectExtension: true, enablePrefixWrappingExtension: false },
+        description: 'should auto correct an ordered list without prefix wrapping',
+        input: '1)option<>',
+        act: () => userEvent.keyboard('{enter}'),
+        expected: '1. option\n<>',
+    },
+    {
+        description: 'should continue a list with a plus marker',
+        input: '+ option<>',
+        act: () => userEvent.keyboard('{enter}'),
+        expected: '+ option\n+ <>',
+    },
+    {
+        description: 'should continue an ordered list with a parenthesis marker',
+        input: '1) option<>',
+        act: () => userEvent.keyboard('{enter}'),
+        expected: '1) option\n2) <>',
+    },
+    {
+        description: 'should continue a task list with an unchecked box',
+        input: '- [x] done<>',
+        act: () => userEvent.keyboard('{enter}'),
+        expected: '- [x] done\n- [ ] <>',
+    },
+    {
+        description: 'should not continue a list with the caret before the marker',
+        input: '<>- item',
+        act: () => userEvent.keyboard('{enter}'),
+        expected: '\n<>- item',
+    },
+    {
         description: 'should not continue a list on shift+enter',
         input: '- item<>',
         act: () => userEvent.keyboard('{Shift>}{Enter}{/Shift}'),

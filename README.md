@@ -267,8 +267,8 @@ export type CommandHandlerContext = {
 | **enableEmDashExtension**                   | `boolean`                                   | Converts two dashes followed by a space into an em dash outside fenced code blocks `default:true`                                        |
 | **enableIndentExtension**                   | `boolean`                                   | Will handle `tab` and `shift+tab` keystrokes, on which will insert/remove indentation instead of the default behavior `default:true`     |
 | **enableLinkPasteExtension**                | `boolean`                                   | Will handle `paste` event, on which will wrap pasted with link/image markup if pasted is URL `default:true`                              |
-| **enableOrderedListAutoCorrectExtension**   | `boolean`                                   | Will autocorrect invalid ordered list patterns when `enter` is pressed `default:false`                                                   |
-| **enablePrefixWrappingExtension**           | `boolean`                                   | Will handle `enter` keystroke, on which will wrap current list sequence if needed `default:true`                                         |
+| **enableOrderedListAutoCorrectExtension**   | `boolean`                                   | Will autocorrect `1)` ordered list markers to `1.` when `enter` is pressed `default:false`                                              |
+| **enablePrefixWrappingExtension**           | `boolean`                                   | Continues lists (`-` `*` `+` `1.` `1.1.` `1)`, task boxes, inside quotes too) and custom prefixes on `enter` `default:true`              |
 | **enableProperLineRemoveBehaviorExtension** | `boolean`                                   | Will handle `command/ctrl+backspace` keystrokes, on which will remove only a current line instead of the default behavior `default:true` |
 | **customPrefixWrapping**                    | (`PrefixWrappingConfig` \| `string`)[]      | Array of custom prefixes, that need to be wrapped. (Will not work with `enablePrefixWrappingExtension:false`)                            |
 | **blockQuotesPlaceholder**                  | `string`                                    | `default: 'quote'`                                                                                                                       |
@@ -291,7 +291,7 @@ export type CommandHandlerContext = {
 
 List, headline, code block and indent commands work after the `>` markers of a quoted line, so `> a` becomes `> * a`, not `* > a`. Inside a quote the code block command wraps whole lines, because its fences need the markers too. A code block opened inside a quote ends with the quote, and `>` inside a code block is code.
 
-With `enableBlockquoteExtension: true` the markers also take care of themselves while typing:
+Lists continue inside quotes on `enter` whichever of `enablePrefixWrappingExtension` and `enableBlockquoteExtension` is on. With `enableBlockquoteExtension: true` the markers also take care of themselves while typing:
 
 | Caret                                          | Key               | Result                                                        |
 | ---------------------------------------------- | ----------------- | ------------------------------------------------------------- |
