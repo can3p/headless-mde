@@ -166,6 +166,26 @@ test.describe('blockquote: paste', () => {
             { name: 'pastes a single line as is', input: '&gt a<>', act: paste('word'), expected: '&gt aword<>' },
             { name: 'pastes outside a quote as is', input: 'a<>', act: paste('x\ny'), expected: 'ax\ny<>' },
             { name: 'pastes code as is', input: '```\n&gt a<>', act: paste('x\ny'), expected: '```\n&gt ax\ny<>' },
+            {
+                name: 'pastes already-quoted lines as they are',
+                input: '&gt <>rest',
+                act: paste('> a\n>\n> b\n'),
+                expected: '&gt a\n&gt\n&gt b\n&gt <>rest',
+                undo: true,
+            },
+            {
+                name: 'pastes quoted list items after a list marker',
+                input: '&gt - <>',
+                act: paste('> - a\n> - b'),
+                expected: '&gt - a\n&gt - b<>',
+                undo: true,
+            },
+            {
+                name: 'quotes mixed lines as usual',
+                input: '&gt <>',
+                act: paste('a\n> b'),
+                expected: '&gt a\n&gt &gt b<>',
+            },
         ],
         config,
     );

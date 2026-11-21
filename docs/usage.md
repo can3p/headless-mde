@@ -69,11 +69,14 @@ disabled, or added with your own handler:
 bootstrapTextareaMarkdown(textarea, {
     options: { enableEmDashExtension: false, preferredUnorderedListSyntax: '-' },
     commands: [
-        { name: 'code', shortcut: ['command+/', 'ctrl+/'] },
+        { name: 'code', shortcut: ['command+/', 'ctrl+/'], shortcutPreventDefault: true },
         { name: 'shrug', handler: ({ cursor }) => cursor.insert(`¯\\_(ツ)_/¯${cursor.MARKER}`) },
     ],
 });
 ```
+
+An entry named after a built-in command changes only the fields it sets: `{ name: 'bold', enable: false }`
+turns bold off, and the rest, such as its Ctrl/Cmd+B shortcut, stays as it was.
 
 In a handler, `cursor.MARKER` marks where the caret lands after the edit; two markers select the text between
 them. The full list of options, commands and their defaults is in the

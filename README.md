@@ -271,7 +271,7 @@ export type CommandHandlerContext = {
 | **enableIndentExtension**                   | `boolean`                                   | Will handle `tab` and `shift+tab` keystrokes, on which will insert/remove indentation instead of the default behavior `default:true`     |
 | **enableLinkPasteExtension**                | `boolean`                                   | Will handle `paste` event, on which will wrap pasted with link/image markup if pasted is URL `default:true`                              |
 | **enableOrderedListAutoCorrectExtension**   | `boolean`                                   | Will autocorrect `1)` ordered list markers to `1.` when `enter` is pressed `default:false`                                              |
-| **enablePrefixWrappingExtension**           | `boolean`                                   | Continues lists (`-` `*` `+` `1.` `1.1.` `1)`, task boxes, inside quotes too) and custom prefixes on `enter` `default:true`              |
+| **enablePrefixWrappingExtension**           | `boolean`                                   | Continues lists (`-` `*` `+` `1.` `1.1.` `1)`, task boxes, inside quotes too) and custom prefixes on `enter`; `backspace` right after a list marker joins the item with the one above `default:true` |
 | **enableProperLineRemoveBehaviorExtension** | `boolean`                                   | Will handle `command/ctrl+backspace` keystrokes, on which will remove only a current line instead of the default behavior `default:true` |
 | **customPrefixWrapping**                    | (`PrefixWrappingConfig` \| `string`)[]      | Array of custom prefixes, that need to be wrapped. (Will not work with `enablePrefixWrappingExtension:false`)                            |
 | **blockQuotesPlaceholder**                  | `string`                                    | `default: 'quote'`                                                                                                                       |
@@ -308,6 +308,8 @@ Lists continue inside quotes on `enter` whichever of `enablePrefixWrappingExtens
 | `> │b` on the first line of a quote            | `backspace`       | `│b`: removes one quote level                                 |
 | inside a code block                            | `enter`, `backspace`, paste | only keeps the markers of the quote holding the block; outside a quote nothing changes |
 | inside a quote                                 | paste of lines    | every pasted line is quoted, blank lines become `>`           |
+| `> │`, lines copied from a quote (`> a`, `> b`) | paste of lines    | `> a`, `> b`: lines already quoted at least as deep are pasted as they are |
+| `> - a`, `> - │b`                              | `backspace`       | `> - a │b`: joins the list items (list rule, see `enablePrefixWrappingExtension`) |
 | anywhere, lists included                       | `shift+enter`, `shift+backspace` | plain textarea behavior                        |
 
 ---

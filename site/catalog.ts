@@ -17,8 +17,9 @@ export type ExtensionInfo = {
 export const EXTENSIONS: Record<ExtensionOption, ExtensionInfo> = {
     enablePrefixWrappingExtension: {
         label: 'Continue lists',
-        summary: 'Enter at the end of a list item starts the next one; Enter on an empty item ends the list.',
-        tryIt: 'Put the caret after “milk” and press Enter, then Enter again.',
+        summary:
+            'Enter at the end of a list item starts the next one; Enter on an empty item ends the list. Backspace right after a marker joins the item with the one above.',
+        tryIt: 'Put the caret after “milk” and press Enter, then Enter again. Or put it right before “bread” and press Backspace.',
     },
     enableOrderedListAutoCorrectExtension: {
         label: 'Fix 1) markers',

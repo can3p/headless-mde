@@ -5,7 +5,10 @@ export const metaCombination = (...keys: string[]): string[] => {
     return [`command+${keys.join('+')}`, `ctrl+${keys.join('+')}`];
 };
 
-/** Splits text into lines with their 1-based numbers and offsets, `endsAt` excludes the line break */
+/**
+ * Splits text into lines with their 1-based numbers and offsets, `endsAt` excludes the line break.
+ * Splits on `\n` only: text is LF-only, as a textarea gives it, a `\r` would stay in the line.
+ */
 export const getLines = (value: string): Line[] => {
     let startsAt = 0;
     return value.split('\n').map((text, index) => {
@@ -147,7 +150,7 @@ export type OpenFence = {
 };
 
 /**
- * Finds the fenced code block open at `cursorAt`, `null` outside a code block.
+ * Finds the fenced code block open at `cursorAt`, `null` outside a code block. `value` is LF-only text.
  * A fence opened inside a blockquote is closed by its closing fence or by the end of the quote,
  * and `>` inside a code block is code, not a quote marker.
  */

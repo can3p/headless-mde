@@ -9,8 +9,13 @@ A headless markdown editor for a plain `<textarea>`, in TypeScript, ESM only, wi
 - `src/lib/handlers.ts`: toolbar commands (bold, lists, quotes, ...), wired by name in `commands.ts`.
 - `src/lib/extensions.ts`: keyboard and paste behaviors, each behind an `enable*Extension` option in
   `types.ts`; `bootstrap.ts` registers them in order, and the order matters when two handle the same key.
+- `src/lib/caretContext.ts`: `TextEdit` and the `CaretContext` every key rule gets (the caret line, its
+  `LinePrefix`, the previous line, the open fence), built once per key event.
 - `src/lib/blockquote.ts`: pure functions for Enter, Backspace and paste inside quotes.
 - `src/lib/utils.ts`: pure helpers (lines, quote markers, fenced code detection).
+- The pure edit functions (`getLines`, `openFenceAt`, `caretContext`, `enterEdit`, the quote and list rules) take
+  LF-only text, as a textarea gives it; they don't handle `\r\n`. Only the clipboard in `quotePaste` is
+  normalized.
 - `docs/`: the human-facing guide (`usage.md`) and behavior reference (`behavior.md`), rendered on the project site.
 - `site/`: the project site (GitHub Pages), a playground built from `src/lib` plus the docs. `site/catalog.ts`
   holds the label and description of every extension and built-in command, typed so a new one fails the

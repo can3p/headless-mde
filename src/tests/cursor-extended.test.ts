@@ -304,6 +304,23 @@ describe('Cursor.replaceLine', () => {
         expect(textarea.value).toBe('line 1\nreplaced\nline 3');
     });
 
+    it.each([
+        ['a middle line, with the break before it', 'a\nb\nc', 2, 'a\nc', 1],
+        ['the last line, with the break before it', 'a\nb', 2, 'a', 1],
+        ['the first line, with the break after it', 'a\nb', 1, 'b', 0],
+        ['an empty first line', '\ntext', 1, 'text', 0],
+        ['the only line', 'a', 1, '', 0],
+        ['the only line when empty: nothing', '', 1, '', 0],
+    ])('null removes %s', (_, value, lineNumber, expected, caret) => {
+        const textarea = createTextArea(value);
+        const cursor = new Cursor(textarea);
+
+        cursor.replaceLine(lineNumber, null);
+
+        expect(textarea.value).toBe(expected);
+        expect([textarea.selectionStart, textarea.selectionEnd]).toEqual([caret, caret]);
+    });
+
     it('should handle invalid line number gracefully', () => {
         const textarea = createTextArea('line 1\nline 2');
         const cursor = new Cursor(textarea);

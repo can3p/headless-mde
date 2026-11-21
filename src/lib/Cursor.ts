@@ -200,8 +200,16 @@ export class Cursor {
         }
 
         if (content === null) {
-            // remove the line with the line break before it
-            this.applyEdit(line.startsAt - 1, line.endsAt, '');
+            // remove the line with the line break before it, the first line with the one after it
+            const [from, to] = line.startsAt > 0 ? [line.startsAt - 1, line.endsAt] : [0, line.endsAt + 1];
+            if (to > this.value.length) {
+                // the only line: there is no line break to remove, so clearing it is enough
+                if (line.endsAt > 0) {
+                    this.applyEdit(0, line.endsAt, '');
+                }
+                return;
+            }
+            this.applyEdit(from, to, '');
             return;
         }
 

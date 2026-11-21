@@ -1,13 +1,8 @@
 import { Extension } from './types';
-import {
-    isBtwOrEq,
-    isImageURL,
-    isInsideFencedCodeBlock,
-    isURL,
-    metaCombination,
-    mapQuotedContent,
-} from './utils';
-import { quoteBackspace, quotePaste, TextEdit } from './blockquote';
+import { isBtwOrEq, isImageURL, isInsideFencedCodeBlock, isURL, metaCombination, mapQuotedContent } from './utils';
+import { quotePaste } from './blockquote';
+import { backspaceRules } from './backspace';
+import { caretContext, firstEdit } from './caretContext';
 import { enterEdit, enterRules } from './enter';
 
 import { Cursor } from './Cursor';
@@ -186,32 +181,42 @@ export const properLineRemoveBehaviorExtension: Extension = (textarea) => {
 };
 
 /**
- * Keeps blockquote markers in place while typing: Backspace right after the markers joins the line with
- * the previous one, pasting several lines quotes each of them (Enter is `enterExtension`'s).
+ * Handle `backspace` right after list markers (`enablePrefixWrappingExtension`; only lists in a quote with
+ * just `enableBlockquoteExtension`) and right after quote markers (`enableBlockquoteExtension`).
+ * One listener, so the rules run in the order `backspaceRules` gives; without any rule nothing is bound.
  * `shift+backspace` keeps the plain textarea behavior.
  */
-export const blockquoteExtension: Extension = (textarea) => {
+export const backspaceExtension: Extension = (textarea, options) => {
+    const rules = backspaceRules(options);
+    if (rules.length === 0) {
+        return;
+    }
     const cursor = new Cursor(textarea);
 
-    const apply = (event: Event, edit: TextEdit | null) => {
-        if (!edit) {
-            return;
-        }
-        event.preventDefault();
-        cursor.replaceRange(edit.from, edit.to, edit.text);
-    };
-
     const keydownListener = (event: KeyboardEvent) => {
-        if (!isPlainKeyPress(event)) {
+        if (!isPlainKeyPress(event) || event.key !== 'Backspace') {
             return;
         }
 
         const { value, selectionStart, selectionEnd } = textarea;
-
-        if (event.key === 'Backspace') {
-            apply(event, quoteBackspace(value, selectionStart, selectionEnd));
+        const edit = firstEdit(caretContext(value, selectionStart, selectionEnd), rules);
+        if (edit) {
+            event.preventDefault();
+            cursor.replaceRange(edit.from, edit.to, edit.text);
         }
     };
+
+    textarea.addEventListener('keydown', keydownListener);
+
+    return () => textarea.removeEventListener('keydown', keydownListener);
+};
+
+/**
+ * Pasting several lines into a quote quotes each of them (Enter and Backspace in quotes are
+ * `enterExtension`'s and `backspaceExtension`'s).
+ */
+export const blockquoteExtension: Extension = (textarea) => {
+    const cursor = new Cursor(textarea);
 
     const pasteListener = (event: ClipboardEvent) => {
         const data = event.clipboardData;
@@ -220,14 +225,14 @@ export const blockquoteExtension: Extension = (textarea) => {
         }
 
         const { value, selectionStart, selectionEnd } = textarea;
-        apply(event, quotePaste(value, selectionStart, selectionEnd, data.getData('text/plain')));
+        const edit = quotePaste(value, selectionStart, selectionEnd, data.getData('text/plain'));
+        if (edit) {
+            event.preventDefault();
+            cursor.replaceRange(edit.from, edit.to, edit.text);
+        }
     };
 
-    textarea.addEventListener('keydown', keydownListener);
     textarea.addEventListener('paste', pasteListener);
 
-    return () => {
-        textarea.removeEventListener('keydown', keydownListener);
-        textarea.removeEventListener('paste', pasteListener);
-    };
+    return () => textarea.removeEventListener('paste', pasteListener);
 };
