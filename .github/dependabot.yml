@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # npm dev dependencies of the library, the site and the test suites: one grouped PR per week
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      npm-dependencies:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      npm-major:
+        patterns:
+          - '*'
+        update-types:
+          - major
+
+  # actions used by the CI, release and site workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - '*'
