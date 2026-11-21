@@ -17,6 +17,7 @@ const stripIndent = (strings: TemplateStringsArray, ...values: unknown[]): strin
         .trim();
 };
 import userEvent from '@testing-library/user-event';
+import { parseContent } from './notation';
 
 type TestCase = {
     description: string;
@@ -620,6 +621,49 @@ const testCases: TestCase[] = [
         expected: '- item\n<>',
     },
     {
+        description: 'should not continue a list on ctrl+enter',
+        input: '- item<>',
+        act: () => userEvent.keyboard('{Control>}{Enter}{/Control}'),
+        expected: '- item<>',
+    },
+    {
+        description: 'should not continue a list on alt+enter',
+        input: '- item<>',
+        act: () => userEvent.keyboard('{Alt>}{Enter}{/Alt}'),
+        expected: '- item<>',
+    },
+    {
+        description: 'should not continue a list on enter during IME composition',
+        input: '- item<>',
+        act: (element) => {
+            element.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', isComposing: true, bubbles: true }),
+            );
+        },
+        expected: '- item<>',
+    },
+    {
+        description: 'should not continue a list on the keyCode 229 enter (Safari IME)',
+        input: '- item<>',
+        act: (element) => {
+            element.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 229, bubbles: true }),
+            );
+        },
+        expected: '- item<>',
+    },
+    {
+        options: { enableOrderedListAutoCorrectExtension: true },
+        description: 'should not auto correct an ordered list on enter during IME composition',
+        input: '1) option<>',
+        act: (element) => {
+            element.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', isComposing: true, bubbles: true }),
+            );
+        },
+        expected: '1) option<>',
+    },
+    {
         description: 'should not turn a quoted fence line into a closing fence of a code block',
         input: '```\n&gt ```\n- item<>',
         act: () => userEvent.keyboard('{enter}'),
@@ -638,14 +682,6 @@ const testCases: TestCase[] = [
     // ! Extension: indent
     // TODO: Mousetrap bind doesn't trigger on `userEvent.keyboard` | `fireEvent.keydown` | `Mousetrap.trigger`
 ];
-
-const parseContent = (value: string) => {
-    const chars = value.replace(/&lt|&gt/g, ' ').split('');
-    const text = value.replace(/(<|>)/g, '').replace(/&lt/g, '<').replace(/&gt/g, '>');
-    const selectionStart = chars.findIndex((x) => x === '<');
-    const selectionEnd = chars.findIndex((x) => x === '>') - 1;
-    return { text, selectionEnd, selectionStart };
-};
 
 describe('md formatting common cases', () => {
     testCases.forEach((c) => {
@@ -746,32 +782,6 @@ describe('TextareaMarkdown component usage', () => {
             }),
             'example_arg1',
             ['example_arg2'],
-        );
-    });
-
-    // TODO shortcuts firing doesn't work for Mousetrap.js
-    test.skip('should trigger command via shortcuts', async () => {
-        const handler = mockFn();
-
-        render(
-            <TextareaMarkdown
-                commands={[
-                    {
-                        name: 'test',
-                        handler,
-                        shortcut: 'tab',
-                        shortcutPreventDefault: true,
-                    },
-                ]}
-            />,
-        );
-
-        await userEvent.keyboard('{Tab}');
-
-        expect(handler).toBeCalledWith(
-            expect.objectContaining({
-                keyEvent: expect.any(KeyboardEvent),
-            }),
         );
     });
 

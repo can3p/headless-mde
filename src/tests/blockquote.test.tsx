@@ -4,17 +4,7 @@ import { act, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { quoteBackspace, quoteEnter, quotePaste } from '../lib/blockquote';
 import { isInsideFencedCodeBlock, splitQuotePrefix } from '../lib/utils';
-
-/**
- *  `<` - selectionStart, `>` - selectionEnd, `&gt` - a literal `>`
- */
-const parseContent = (value: string) => {
-    const chars = value.replace(/&lt|&gt/g, ' ').split('');
-    const text = value.replace(/(<|>)/g, '').replace(/&lt/g, '<').replace(/&gt/g, '>');
-    const selectionStart = chars.findIndex((x) => x === '<');
-    const selectionEnd = chars.findIndex((x) => x === '>') - 1;
-    return { text, selectionEnd, selectionStart };
-};
+import { parseContent } from './notation';
 
 type TestCase = {
     description: string;

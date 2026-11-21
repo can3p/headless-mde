@@ -49,8 +49,7 @@ export function fireInput(
     selectionStart?: number,
     selectionEnd?: number,
 ): void {
-    // PATCH: Rewritten to use GitHub's approach - avoid select() to prevent Chrome scroll bug
-    // Use surgical selection ranges and contentEditable trick for execCommand
+    // avoid select() to prevent the Chrome scroll bug, replace only the given range
 
     // If selection range provided, use it; otherwise replace all content
     const start = typeof selectionStart === 'number' ? selectionStart : 0;
@@ -62,15 +61,15 @@ export function fireInput(
 
     let isSuccess = false;
 
-    // Try execCommand with contentEditable trick (GitHub's approach)
-    if (document.execCommand) {
-        input.contentEditable = 'true';
+    // a native edit keeps the undo history. `execCommand` edits the focused element, so only use it when
+    // that's the input. A focused textarea needs no contentEditable trick (that made WebKit scroll to the
+    // end of the text); Firefox supports it since version 89.
+    if (document.execCommand && document.activeElement === input) {
         try {
             isSuccess = document.execCommand('insertText', false, value);
         } catch {
             isSuccess = false;
         }
-        input.contentEditable = 'false';
     }
 
     // Fallback: manual value manipulation

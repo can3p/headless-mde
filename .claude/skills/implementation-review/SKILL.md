@@ -22,9 +22,9 @@ behavior (the plan's table, or the PR description), never your reasoning.
 > You are a critical senior reviewer. Review the change `git -C <repo path> diff <base>..HEAD` in the
 > TypeScript library at `<repo path>`, a headless textarea markdown editor. Read the diff and the code
 > around it in `src/lib` and `src/tests`. Intended behavior: `<table or summary>`.
-> Do not modify the repo. You may run `npx jest`, `npx tsc --noEmit` and `npm run lint`, and write probe
-> tests: copy them into `src/tests` named `zz-critic-*`, and delete them before you finish so
-> `git status` is clean.
+> Do not modify the repo. You may run `npx jest`, `npm run typecheck`, `npm run lint` and
+> `npx playwright test`, and write probe tests: copy them into `src/tests` named `zz-critic-*` (jest) or
+> `e2e/zz-critic-*.spec.ts` (browsers), and delete them before you finish so `git status` is clean.
 >
 > Answer, with file:line references, marking each finding you reproduced with a probe as verified:
 > 1. **Modularity**: is pure logic kept apart from DOM and `Cursor`? Is anything duplicated that an
@@ -32,9 +32,9 @@ behavior (the plan's table, or the PR description), never your reasoning.
 >    honest?
 > 2. **Gaps**: which behaviors are wrong or missing? Probe nesting, empty lines, caret vs selection,
 >    caret inside markup, code blocks, CRLF, the other extensions on the same key or event and their
->    order in `bootstrap.ts`, Shift and other modifiers, IME, undo, the React component, and code that
->    only runs outside `NODE_ENV === 'test'`. Does the change alter behavior for users who did not opt
->    in to a new option? That is a regression and ranks first.
+>    order in `bootstrap.ts`, Shift and other modifiers, IME, undo, the React component, and what jsdom
+>    can't run (`execCommand`, scroll, undo; probe it in `e2e/`). Does the change alter behavior for
+>    users who did not opt in to a new option? That is a regression and ranks first.
 > 3. **Blockers**: what must be fixed before merge, and what can wait? Rank them.
 > 4. **Spaghetti**: does the change spread conditionals across files or grow functions with many
 >    branches? Name the worst spots and say whether they are acceptable.

@@ -1,3 +1,4 @@
+import { revealCaret } from './caret';
 import { isBtwOrEq, fireInput, getLines } from './utils';
 
 export type SelectionDirectionType = 'backward' | 'forward' | 'none';
@@ -116,76 +117,21 @@ export class Cursor {
      * if some content is selected will replace it
      */
     public insert(content: string) {
-        const normalizedContent = this.normalizeSelection(content);
-        if (!this.selection) {
-            this.insertAtCursor(content);
-            return;
-        }
-        const start = this.selection.selectionStart;
-        const end = this.selection.selectionEnd;
-
-        // PATCH: Use surgical insertion - only replace selected range
-        const data = this.execRaw(normalizedContent);
-        if (process.env.NODE_ENV === 'test') {
-            const newValue = this.value.slice(0, start) + data.text + this.value.slice(end);
-            this.element.value = newValue;
-        } else {
-            // Pass selection range to fireInput for surgical replacement
-            fireInput(this.element, data.text, start, end);
-        }
-
-        // Set cursor position after inserted text
-        if (data.selectionStart !== null && data.selectionEnd !== null) {
-            const offset = start;
-            this.element.selectionStart = offset + data.selectionStart;
-            this.element.selectionEnd = offset + data.selectionEnd;
-        }
-    }
-
-    private insertAtCursor(content: string) {
-        const cursorAt = this.position.cursorAt;
-        const normalizedContent = this.normalizeSelection(content);
-
-        // PATCH: Use surgical insertion at cursor position
-        const data = this.execRaw(normalizedContent);
-        if (process.env.NODE_ENV === 'test') {
-            const newValue = this.value.slice(0, cursorAt) + data.text + this.value.slice(cursorAt);
-            this.element.value = newValue;
-        } else {
-            // Insert at cursor (replace zero-length selection)
-            fireInput(this.element, data.text, cursorAt, cursorAt);
-        }
-
-        // Set cursor position after inserted text
-        if (data.selectionStart !== null) {
-            this.element.selectionStart = cursorAt + data.selectionStart;
-            this.element.selectionEnd = cursorAt + (data.selectionEnd ?? data.selectionStart);
-        }
+        const { selectionStart, selectionEnd } = this.element;
+        this.applyEdit(selectionStart, selectionEnd, this.normalizeSelection(content));
     }
 
     /**
-     * Insert content and scroll it into view if it's below the visible area
-     * @param forceManual - Force manual value manipulation instead of execCommand (for Firefox file inputs)
+     * Insert content and scroll it into view if it's below the visible area.
+     * Every edit reveals the caret now, this stays for compatibility.
      */
     public insertAndScrollIntoView(content: string) {
-        const cursorPositionBefore = this.element.selectionStart;
         this.insert(content);
-
-        // Scroll into view if inserted content is below visible area
-        const textarea = this.element;
-        const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
-        const cursorLine = textarea.value.substring(0, cursorPositionBefore).split('\n').length;
-        const cursorPixelPosition = cursorLine * lineHeight;
-        const visibleBottom = textarea.scrollTop + textarea.clientHeight;
-
-        if (cursorPixelPosition > visibleBottom) {
-            // Content is below visible area, scroll it into view
-            textarea.scrollTop = cursorPixelPosition - textarea.clientHeight + lineHeight * 2;
-        }
     }
 
     /**
-     * Find and replace text while preserving scroll position
+     * Find and replace text while preserving scroll position and the user's selection,
+     * e.g. to swap an upload placeholder while the user types elsewhere
      * @param searchText - Text to find
      * @param replacement - Text to replace with
      */
@@ -196,10 +142,18 @@ export class Cursor {
         }
         const searchEnd = searchStart + searchText.length;
 
-        // Preserve scroll position
-        const savedScrollTop = this.element.scrollTop;
+        const { selectionStart, selectionEnd, selectionDirection, scrollTop } = this.element;
+        // a position after the match moves with it, one inside it goes to the end of the replacement
+        const shift = (position: number) =>
+            position <= searchStart
+                ? position
+                : position >= searchEnd
+                  ? position + replacement.length - searchText.length
+                  : searchStart + replacement.length;
+
         fireInput(this.element, replacement, searchStart, searchEnd);
-        this.element.scrollTop = savedScrollTop;
+        this.element.setSelectionRange(shift(selectionStart), shift(selectionEnd), selectionDirection);
+        this.element.scrollTop = scrollTop;
     }
 
     /**
@@ -224,15 +178,7 @@ export class Cursor {
         const start = selectedLines[0].startsAt;
         const end = selectedLines[selectedLines.length - 1].endsAt;
 
-        // PATCH: Use surgical insertion instead of setValue to avoid scroll jumps
-        const data = this.execRaw(this.normalizeSelection(content, selectReplaced ? 'SELECT_ALL' : 'TO_END'));
-        fireInput(this.element, data.text, start, end);
-
-        // Set cursor position after replaced text
-        if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.selectionStart = start + data.selectionStart;
-            this.element.selectionEnd = start + data.selectionEnd;
-        }
+        this.applyEdit(start, end, this.normalizeSelection(content, selectReplaced ? 'SELECT_ALL' : 'TO_END'));
     }
 
     /**
@@ -240,13 +186,7 @@ export class Cursor {
      * Place the caret or selection with `Cursor.MARKER`, the caret goes to the end of the content by default.
      */
     public replaceRange(from: number, to: number, content: string) {
-        const data = this.execRaw(this.normalizeSelection(content));
-        fireInput(this.element, data.text, from, to);
-
-        if (data.selectionStart !== null) {
-            this.element.selectionStart = from + data.selectionStart;
-            this.element.selectionEnd = from + (data.selectionEnd ?? data.selectionStart);
-        }
+        this.applyEdit(from, to, this.normalizeSelection(content));
     }
 
     /**
@@ -258,30 +198,14 @@ export class Cursor {
             console.error('Unknown line number: ' + lineNumber);
             return;
         }
-        const start = line.startsAt;
-        const end = line.endsAt;
+
         if (content === null) {
-            // PATCH: line should be removed - use surgical deletion
-            const data = this.execRaw('');
-            // Remove from start-1 (including newline) to end
-            fireInput(this.element, data.text, start - 1, end);
-            // Set cursor position
-            if (data.selectionStart !== null) {
-                this.element.selectionStart = start - 1 + data.selectionStart;
-                this.element.selectionEnd = start - 1 + data.selectionStart;
-            }
+            // remove the line with the line break before it
+            this.applyEdit(line.startsAt - 1, line.endsAt, '');
             return;
         }
 
-        // PATCH: Use surgical insertion instead of setValue
-        const data = this.execRaw(this.normalizeSelection(content));
-        fireInput(this.element, data.text, start, end);
-
-        // Set cursor position after replaced text
-        if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.selectionStart = start + data.selectionStart;
-            this.element.selectionEnd = start + data.selectionEnd;
-        }
+        this.applyEdit(line.startsAt, line.endsAt, this.normalizeSelection(content));
     }
 
     /**
@@ -295,31 +219,30 @@ export class Cursor {
         const end = this.selection?.selectionEnd ?? this.position.cursorAt;
 
         if (this.isSelectedWrappedWith(markup) && unwrap) {
-            // PATCH: Unwrap - use surgical replacement with MARKERs for cursor positioning
-            const unwrappedContent = MARKER + text.slice(start, end) + MARKER;
-            const data = this.execRaw(unwrappedContent);
-            // Replace from (start - prefix.length) to (end + suffix.length)
-            fireInput(this.element, data.text, start - prefix.length, end + suffix.length);
-
-            // Set cursor position
-            if (data.selectionStart !== null && data.selectionEnd !== null) {
-                const offset = start - prefix.length;
-                this.element.selectionStart = offset + data.selectionStart;
-                this.element.selectionEnd = offset + data.selectionEnd;
-            }
+            this.applyEdit(start - prefix.length, end + suffix.length, MARKER + text.slice(start, end) + MARKER);
             return;
         }
 
-        // PATCH: Wrap - use surgical replacement with MARKERs for cursor positioning
-        const wrappedContent = prefix + MARKER + (text.slice(start, end) || placeholder) + MARKER + suffix;
-        const data = this.execRaw(wrappedContent);
-        fireInput(this.element, data.text, start, end);
+        this.applyEdit(start, end, prefix + MARKER + (text.slice(start, end) || placeholder) + MARKER + suffix);
+    }
 
-        // Set cursor position
-        if (data.selectionStart !== null && data.selectionEnd !== null) {
-            this.element.selectionStart = start + data.selectionStart;
-            this.element.selectionEnd = start + data.selectionEnd;
+    /**
+     * The one way `Cursor` edits the text: replaces `from`-`to` with `content` as a native edit (undo keeps it),
+     * places the selection at the `MARKER`s of `content` (one is a caret, none leaves it after the content)
+     * and scrolls the caret into view.
+     */
+    private applyEdit(from: number, to: number, content: string) {
+        const data = this.execRaw(content);
+        fireInput(this.element, data.text, from, to);
+
+        if (data.selectionStart !== null) {
+            this.element.setSelectionRange(
+                from + data.selectionStart,
+                from + (data.selectionEnd ?? data.selectionStart),
+            );
         }
+
+        revealCaret(this.element);
     }
 
     private isSelectedWrappedWith(markup: string | [string, string]) {
