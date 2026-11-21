@@ -1,85 +1,58 @@
 import { Cursor, Line } from './Cursor';
-import {
-    getLines,
-    OpenFence,
-    openFenceAt,
-    QuoteParts,
-    quoteBlank,
-    quoteContinuation,
-    quoteOuter,
-    quotePrefix,
-    splitQuotePrefix,
-    takeQuoteLevels,
-} from './utils';
-
-/**
- * A replacement of `value.slice(from, to)` with `text`.
- * `text` carries a `Cursor.MARKER` where the caret goes.
- */
-export type TextEdit = {
-    from: number;
-    to: number;
-    text: string;
-};
+import { CaretContext, caretContext, TextEdit } from './caretContext';
+import { OpenFence, quoteBlank, quoteContinuation, quoteOuter, quotePrefix } from './utils';
 
 const M = Cursor.MARKER;
 
-type QuotedCaret = {
+/** A quoted line split at its quote markers, every part as written */
+type QuotedLine = {
     line: Line;
+    /** Quote markers, e.g. `> > ` */
+    quote: string;
+    depth: number;
+    /** Everything after the quote markers */
+    rest: string;
+};
+
+type QuotedCaret = QuotedLine & {
     /** Caret offset inside the line */
     column: number;
-    parts: QuoteParts;
-    /** The line above with its quote parts, `null` on the first line */
-    prev: { line: Line; parts: QuoteParts } | null;
+    /** The line above, `null` on the first line */
+    prev: QuotedLine | null;
     /** Caret is inside a fenced code block that lives in this quote */
     inCode: boolean;
 };
+
+const quotedLine = ({ line, prefix }: { line: Line; prefix: CaretContext['prefix'] }): QuotedLine => ({
+    line,
+    quote: prefix.quote,
+    depth: prefix.depth,
+    rest: line.text.slice(prefix.quote.length),
+});
 
 /**
  * Describes a collapsed caret placed after the quote markers of a quoted line, `null` otherwise.
  * Inside a code block only the markers of the quote holding the block count, the rest is code:
  * in a code block outside any quote there are no markers at all.
  */
-const quotedCaretAt = (
-    value: string,
-    start: number,
-    end: number,
-    fence: OpenFence | null = openFenceAt(value, start),
-): QuotedCaret | null => {
-    if (start !== end) {
+const quotedCaretAt = (context: CaretContext): QuotedCaret | null => {
+    const { start, end, prefix, column, prev, fence } = context;
+    if (start !== end || prefix.depth === 0 || column < prefix.quote.length) {
         return null;
     }
-
-    const lines = getLines(value);
-    const index = lines.findIndex((line) => start >= line.startsAt && start <= line.endsAt);
-    const line = lines[index];
-    const parts = fence ? takeQuoteLevels(line.text, fence.depth) : splitQuotePrefix(line.text);
-    const column = start - line.startsAt;
-
-    if (parts.depth === 0 || column < parts.quote.length) {
-        return null;
-    }
-
-    const prevLine = index > 0 ? lines[index - 1] : null;
-    return {
-        line,
-        column,
-        parts,
-        prev: prevLine && { line: prevLine, parts: splitQuotePrefix(prevLine.text) },
-        inCode: fence !== null,
-    };
+    return { ...quotedLine(context), column, prev: prev && quotedLine(prev), inCode: fence !== null };
 };
 
 /** Enter on a quoted line without content */
-const enterOnEmptyQuoteLine = ({ line, parts, prev }: QuotedCaret): TextEdit => {
-    const outer = quoteOuter(parts.quote);
+const enterOnEmptyQuoteLine = ({ line, quote, depth, prev }: QuotedCaret): TextEdit => {
+    const outer = quoteOuter(quote);
 
-    if (!prev || prev.parts.depth < parts.depth) {
+    if (!prev || prev.depth < depth) {
         // the quote starts on this line: leave it
         return { from: line.startsAt, to: line.endsAt, text: quotePrefix(outer, true) + M };
     }
 
-    if (prev.parts.depth === parts.depth && prev.parts.rest.trim() === '') {
+    if (prev.depth === depth && prev.rest.trim() === '') {
         // second empty line in a row: leave one quote level, keeping a blank line between
         return {
             from: prev.line.startsAt,
@@ -89,7 +62,7 @@ const enterOnEmptyQuoteLine = ({ line, parts, prev }: QuotedCaret): TextEdit => 
     }
 
     // first empty line: paragraph break inside the quote
-    return { from: line.startsAt, to: line.endsAt, text: `${quoteBlank(parts.quote)}\n${quoteContinuation(parts.quote)}${M}` };
+    return { from: line.startsAt, to: line.endsAt, text: `${quoteBlank(quote)}\n${quoteContinuation(quote)}${M}` };
 };
 
 /**
@@ -99,28 +72,28 @@ const enterOnEmptyQuoteLine = ({ line, parts, prev }: QuotedCaret): TextEdit => 
  * - on an empty quote line after a paragraph break leaves one quote level
  * - on an empty quote line that starts the quote removes the markers
  * - inside a code block in the quote only continues the quote
+ * A selection keeps the plain behavior.
  */
-export const quoteEnter = (
-    value: string,
-    start: number,
-    end: number,
-    fence: OpenFence | null = openFenceAt(value, start),
-): TextEdit | null => {
-    const caret = quotedCaretAt(value, start, end, fence);
+export const quoteEnterRule = (context: CaretContext): TextEdit | null => {
+    const caret = quotedCaretAt(context);
     if (!caret) {
         return null;
     }
 
-    const continueQuote = { from: start, to: end, text: `\n${quoteContinuation(caret.parts.quote)}${M}` };
+    const continueQuote = { from: context.start, to: context.end, text: `\n${quoteContinuation(caret.quote)}${M}` };
 
     if (caret.inCode) {
         return continueQuote;
     }
-    if (caret.parts.rest.trim() === '') {
+    if (caret.rest.trim() === '') {
         return enterOnEmptyQuoteLine(caret);
     }
     return continueQuote;
 };
+
+/** `quoteEnterRule` for a value and selection; text is LF-only, as a textarea gives it */
+export const quoteEnter = (value: string, start: number, end: number, fence?: OpenFence | null): TextEdit | null =>
+    quoteEnterRule(caretContext(value, start, end, fence));
 
 /**
  * Backspace with the caret right after the quote markers:
@@ -128,25 +101,25 @@ export const quoteEnter = (
  * - after a paragraph break (`>` line) removes the break
  * - after a quoted line with text joins both lines with a space
  * - on the first line of a quote, or below a shallower quote, removes one quote level
- * Inside a code block it keeps the plain behavior.
+ * Inside a code block, and with a selection, it keeps the plain behavior.
  */
-export const quoteBackspace = (value: string, start: number, end: number): TextEdit | null => {
-    const caret = quotedCaretAt(value, start, end);
-    if (!caret || caret.inCode || caret.column !== caret.parts.quote.length) {
+export const quoteBackspaceRule = (context: CaretContext): TextEdit | null => {
+    const caret = quotedCaretAt(context);
+    if (!caret || caret.inCode || caret.column !== caret.quote.length) {
         return null;
     }
 
-    const { line, parts, prev } = caret;
-    const contentStart = line.startsAt + parts.quote.length;
+    const { line, quote, depth, rest, prev } = caret;
+    const contentStart = line.startsAt + quote.length;
 
     // a deeper line above counts too: in markdown this line already continues that paragraph
-    if (prev && prev.parts.depth >= parts.depth) {
-        if (parts.rest.trim() === '') {
+    if (prev && prev.depth >= depth) {
+        if (rest.trim() === '') {
             return { from: prev.line.endsAt, to: line.endsAt, text: M };
         }
 
-        if (prev.parts.rest.trim() === '') {
-            return { from: prev.line.startsAt, to: contentStart, text: parts.quote + M };
+        if (prev.rest.trim() === '') {
+            return { from: prev.line.startsAt, to: contentStart, text: quote + M };
         }
 
         const separator = /\s$/.test(prev.line.text) ? '' : ' ';
@@ -156,14 +129,18 @@ export const quoteBackspace = (value: string, start: number, end: number): TextE
     return {
         from: line.startsAt,
         to: contentStart,
-        text: quotePrefix(quoteOuter(parts.quote), parts.rest !== '') + M,
+        text: quotePrefix(quoteOuter(quote), rest !== '') + M,
     };
 };
+
+/** `quoteBackspaceRule` for a value and selection; text is LF-only, as a textarea gives it */
+export const quoteBackspace = (value: string, start: number, end: number): TextEdit | null =>
+    quoteBackspaceRule(caretContext(value, start, end));
 
 /**
  * Paste of several lines into a quote: every pasted line gets the quote markers,
  * blank lines become paragraph breaks (`>` lines). Inside a code block in the quote
- * lines get the markers as they are.
+ * lines get the markers as they are. `value` is LF-only, as a textarea gives it; the clipboard may have CRLF.
  */
 export const quotePaste = (value: string, start: number, end: number, clipboard: string): TextEdit | null => {
     const pasted = clipboard.replace(/\r\n?/g, '\n');
@@ -172,12 +149,12 @@ export const quotePaste = (value: string, start: number, end: number, clipboard:
     }
 
     // the caret may sit on a selection: describe its start
-    const caret = quotedCaretAt(value, start, start);
+    const caret = quotedCaretAt(caretContext(value, start, start));
     if (!caret) {
         return null;
     }
 
-    const { quote } = caret.parts;
+    const { quote } = caret;
     const pastedLines = pasted.split('\n');
     const text = pastedLines
         .map((l, index) => {

@@ -1,27 +1,11 @@
 import { Cursor, Line } from './Cursor';
-import { quoteEnter, TextEdit } from './blockquote';
-import { continuationPrefix, correctListMarker, formatLinePrefix, LinePrefix, parseLinePrefix, prefixLength } from './linePrefix';
+import { quoteEnterRule } from './blockquote';
+import { applyTextEdit, CaretContext, caretContext, EditRule, firstEdit, listScope, TextEdit } from './caretContext';
+import { continuationPrefix, correctListMarker, formatLinePrefix, prefixLength } from './linePrefix';
 import { PrefixWrappingConfig, TextareaMarkdownOptions } from './types';
-import { escapeRegExp, getLines, OpenFence, openFenceAt, quoteContinuation, splitQuotePrefix } from './utils';
+import { escapeRegExp, openFenceAt, quoteContinuation } from './utils';
 
 const M = Cursor.MARKER;
-
-/** What every Enter rule gets to know about the caret */
-export type EnterContext = {
-    value: string;
-    start: number;
-    end: number;
-    /** The line holding `start` */
-    line: Line;
-    /** Caret offset inside `line` */
-    column: number;
-    fence: OpenFence | null;
-    /** Markup of `line`, inside a code block only the quote levels holding it */
-    prefix: LinePrefix;
-};
-
-/** One Enter behavior: the edit to make, `null` when the rule doesn't apply */
-export type EnterRule = (context: EnterContext) => TextEdit | null;
 
 /** Enter on an empty item: leave the list, but stay in the quote */
 const leaveItem = (line: Line, quote: string): TextEdit => ({
@@ -30,28 +14,23 @@ const leaveItem = (line: Line, quote: string): TextEdit => ({
     text: quote ? quoteContinuation(quote) + M : '\n' + M,
 });
 
-/**
- * List items continue with the next marker, the same quote and indent and an unchecked checkbox.
- * `quoted` limits the rule to lists inside a quote.
- */
-export const listRule =
-    (scope: 'all' | 'quoted'): EnterRule =>
-    ({ line, column, start, end, fence, prefix }) => {
-        const { list, quote, indent, content, depth } = prefix;
-        if (fence || !list || (scope === 'quoted' && depth === 0)) {
-            return null;
-        }
-        const empty = content.trim() === '';
-        // an empty item ends after its marker, the spacing may be trailing whitespace
-        const contentColumn = empty ? quote.length + indent.length + list.marker.length : prefixLength(prefix);
-        if (column < contentColumn) {
-            return null;
-        }
-        if (empty) {
-            return leaveItem(line, quote);
-        }
-        return { from: start, to: end, text: `\n${formatLinePrefix(continuationPrefix(prefix))}${M}` };
-    };
+/** List items continue with the next marker, the same quote and indent and an unchecked checkbox */
+export const listRule: EditRule = ({ line, column, start, end, fence, prefix }) => {
+    const { list, quote, indent, content } = prefix;
+    if (fence || !list) {
+        return null;
+    }
+    const empty = content.trim() === '';
+    // an empty item ends after its marker, the spacing may be trailing whitespace
+    const contentColumn = empty ? quote.length + indent.length + list.marker.length : prefixLength(prefix);
+    if (column < contentColumn) {
+        return null;
+    }
+    if (empty) {
+        return leaveItem(line, quote);
+    }
+    return { from: start, to: end, text: `\n${formatLinePrefix(continuationPrefix(prefix))}${M}` };
+};
 
 const toConfig = (value: PrefixWrappingConfig | string): PrefixWrappingConfig =>
     typeof value === 'string' ? { prefix: value } : value;
@@ -62,7 +41,10 @@ const toConfig = (value: PrefixWrappingConfig | string): PrefixWrappingConfig =>
  * `prefix` then gets the line without its markers. With `quotes` (the blockquote extension) quoted lines
  * are only matched after the markers, so a `'> '` prefix doesn't take over from the quote rule.
  */
-export const customPrefixRule = (customs: (PrefixWrappingConfig | string)[], { quotes }: { quotes: boolean }): EnterRule => {
+export const customPrefixRule = (
+    customs: (PrefixWrappingConfig | string)[],
+    { quotes }: { quotes: boolean },
+): EditRule => {
     const configs = customs.map(toConfig);
 
     return ({ line, column, start, end, fence, prefix }) => {
@@ -102,27 +84,21 @@ export const customPrefixRule = (customs: (PrefixWrappingConfig | string)[], { q
     };
 };
 
-/** Quote continuation, see `quoteEnter` */
-export const quoteRule: EnterRule = ({ value, start, end, fence }) => quoteEnter(value, start, end, fence);
-
 /** The Enter rules the options turn on, in the order they are tried */
-export const enterRules = (options: TextareaMarkdownOptions): EnterRule[] => {
-    const rules: EnterRule[] = [];
+export const enterRules = (options: TextareaMarkdownOptions): EditRule[] => {
+    const rules: EditRule[] = [];
     if (options.enablePrefixWrappingExtension) {
-        rules.push(
-            customPrefixRule(options.customPrefixWrapping, { quotes: options.enableBlockquoteExtension }),
-            listRule('all'),
-        );
-    } else if (options.enableBlockquoteExtension) {
-        rules.push(listRule('quoted'));
+        rules.push(customPrefixRule(options.customPrefixWrapping, { quotes: options.enableBlockquoteExtension }));
+    }
+    const lists = listScope(options);
+    if (lists) {
+        rules.push(lists(listRule));
     }
     if (options.enableBlockquoteExtension) {
-        rules.push(quoteRule);
+        rules.push(quoteEnterRule);
     }
     return rules;
 };
-
-export const applyTextEdit = (value: string, { from, to, text }: TextEdit) => value.slice(0, from) + text + value.slice(to);
 
 /** The edit that turns `before` into `after`: everything between their common start and common end */
 export const diffEdit = (before: string, after: string): TextEdit => {
@@ -141,53 +117,32 @@ export const diffEdit = (before: string, after: string): TextEdit => {
     return { from, to: before.length - tail, text: after.slice(from, after.length - tail) };
 };
 
-const runRules = (value: string, start: number, end: number, fence: OpenFence | null, rules: EnterRule[]) => {
-    const line = getLines(value).find((l) => start >= l.startsAt && start <= l.endsAt)!;
-    const context: EnterContext = {
-        value,
-        start,
-        end,
-        line,
-        column: start - line.startsAt,
-        fence,
-        prefix: parseLinePrefix(line.text, fence?.depth),
-    };
-    for (const rule of rules) {
-        const edit = rule(context);
-        if (edit) {
-            return edit;
-        }
-    }
-    return null;
-};
-
-/** Rewrites a `1)` list marker on the line at `cursorAt` to `1.`, `null` when there is none */
-const markerCorrectionAt = (value: string, cursorAt: number): TextEdit | null => {
-    const line = getLines(value).find((l) => cursorAt >= l.startsAt && cursorAt <= l.endsAt)!;
-    const { quote, rest } = splitQuotePrefix(line.text);
-    const corrected = correctListMarker(rest);
+/** Rewrites a `1)` list marker on the caret line to `1.`, `null` when there is none */
+const markerCorrection = ({ line, prefix }: CaretContext): TextEdit | null => {
+    const corrected = correctListMarker(line.text.slice(prefix.quote.length));
     if (!corrected) {
         return null;
     }
-    const from = line.startsAt + quote.length;
+    const from = line.startsAt + prefix.quote.length;
     return { from, to: from + corrected.length, text: corrected.text };
 };
 
 /**
- * The edit for a plain Enter, `null` to leave it to the textarea.
+ * The edit for a plain Enter, `null` to leave it to the textarea. `value` is LF-only, as a textarea gives it.
  * With `autoCorrect`, a `1)` marker becomes `1.` first, in the same edit, so it is one undo step.
  */
 export const enterEdit = (
     value: string,
     start: number,
     end: number,
-    rules: EnterRule[],
+    rules: EditRule[],
     autoCorrect: boolean,
 ): TextEdit | null => {
     const fence = openFenceAt(value, start);
-    const correction = autoCorrect && !fence ? markerCorrectionAt(value, start) : null;
+    const context = caretContext(value, start, end, fence);
+    const correction = autoCorrect && !fence ? markerCorrection(context) : null;
     if (!correction) {
-        return runRules(value, start, end, fence, rules);
+        return firstEdit(context, rules);
     }
 
     // positions after the correction; a caret inside the old marker goes after the new one
@@ -201,7 +156,12 @@ export const enterEdit = (
               : position + correctedEnd - correction.to;
     const [newStart, newEnd] = [map(start), map(end)];
 
-    const next = runRules(corrected, newStart, newEnd, fence, rules) ?? { from: newStart, to: newEnd, text: '\n' + M };
+    // the corrected text is a new string, so it gets its own context
+    const next = firstEdit(caretContext(corrected, newStart, newEnd, fence), rules) ?? {
+        from: newStart,
+        to: newEnd,
+        text: '\n' + M,
+    };
     // one edit for both, so the correction and the new line are one undo step
     return diffEdit(value, applyTextEdit(corrected, next));
 };

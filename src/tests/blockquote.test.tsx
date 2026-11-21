@@ -65,6 +65,12 @@ const run = (cases: TestCase[]) => {
 describe('blockquote extension: enter', () => {
     run([
         {
+            description: 'a selection in a quote keeps the plain behavior',
+            input: '&gt a<b>c',
+            act: enter,
+            expected: '&gt a\n<>c',
+        },
+        {
             description: 'continues the quote',
             input: '&gt text<>',
             act: enter,
@@ -428,6 +434,11 @@ describe('quote helpers', () => {
         expect(quoteEnter('text', 4, 4)).toBeNull();
         expect(quoteBackspace('text', 0, 0)).toBeNull();
         expect(quotePaste('text', 4, 4, 'a\nb')).toBeNull();
+    });
+
+    test('pure edits return null on a selection', () => {
+        expect(quoteEnter('> abc', 3, 4)).toBeNull();
+        expect(quoteBackspace('> a\n> b', 6, 7)).toBeNull();
     });
 
     test('pure edits return null inside the markers', () => {

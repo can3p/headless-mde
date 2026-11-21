@@ -1,5 +1,6 @@
 import { Cursor } from '../lib/Cursor';
-import { applyTextEdit, diffEdit, enterEdit, enterRules } from '../lib/enter';
+import { applyTextEdit } from '../lib/caretContext';
+import { diffEdit, enterEdit, enterRules } from '../lib/enter';
 import { defaultTextareaMarkdownOptions, TextareaMarkdownOptions } from '../lib/types';
 import { formatContent, parseContent } from './notation';
 

@@ -7,7 +7,8 @@ import {
     metaCombination,
     mapQuotedContent,
 } from './utils';
-import { quoteBackspace, quotePaste, TextEdit } from './blockquote';
+import { quoteBackspace, quotePaste } from './blockquote';
+import { TextEdit } from './caretContext';
 import { enterEdit, enterRules } from './enter';
 
 import { Cursor } from './Cursor';
