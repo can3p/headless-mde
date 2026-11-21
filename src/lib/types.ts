@@ -85,7 +85,8 @@ export type TextareaMarkdownOptions = {
 
     /**
      * Will handle `enter` keystroke: continues lists (`-`, `*`, `+`, `1.`, `1.1.`, `1)`, task checkboxes, inside
-     * quotes too) and `customPrefixWrapping`, an empty item leaves the list `default:true`
+     * quotes too) and `customPrefixWrapping`, an empty item leaves the list. `backspace` right after a list
+     * marker joins the item with the one above, removes an empty item or outdents a nested one `default:true`
      */
     enablePrefixWrappingExtension: boolean;
 

@@ -2,6 +2,7 @@ import { test } from '@playwright/test';
 import { press, runCases } from './helpers';
 
 const enter = press('Enter');
+const backspace = press('Backspace');
 
 test.describe('lists: enter', () => {
     runCases([
@@ -18,7 +19,13 @@ test.describe('lists: enter', () => {
         { name: 'continues a plus list', input: '+ a<>', act: enter, expected: '+ a\n+ <>' },
         { name: 'continues a parenthesis list', input: '1) a<>', act: enter, expected: '1) a\n2) <>', undo: true },
         { name: 'continues a task list', input: '- [x] a<>', act: enter, expected: '- [x] a\n- [ ] <>' },
-        { name: 'continues a list in a quote', input: '&gt - a<>', act: enter, expected: '&gt - a\n&gt - <>', undo: true },
+        {
+            name: 'continues a list in a quote',
+            input: '&gt - a<>',
+            act: enter,
+            expected: '&gt - a\n&gt - <>',
+            undo: true,
+        },
         { name: 'leaves a list in a quote', input: '&gt - <>', act: enter, expected: '&gt <>' },
         { name: 'numpad enter continues a list', input: '- a<>', act: press('NumpadEnter'), expected: '- a\n- <>' },
         { name: 'is a plain line break before the marker', input: '<>- a', act: enter, expected: '\n<>- a' },
@@ -77,6 +84,44 @@ test.describe('ordered list auto-correct', () => {
         ],
         { options: { enableOrderedListAutoCorrectExtension: true } },
     );
+});
+
+test.describe('lists: backspace after the marker', () => {
+    runCases([
+        { name: 'joins the item above', input: '- a\n- <>b', act: backspace, expected: '- a <>b', undo: true },
+        { name: 'removes an empty item', input: '- a\n- <>', act: backspace, expected: '- a<>', undo: true },
+        { name: 'joins an ordered item', input: '1. a\n2. <>b', act: backspace, expected: '1. a <>b' },
+        {
+            name: 'outdents a nested first item',
+            input: '- a\n    - <>b',
+            act: backspace,
+            expected: '- a\n- <>b',
+            undo: true,
+        },
+        { name: 'removes the marker of a first item', input: '- <>b', act: backspace, expected: '<>b', undo: true },
+        {
+            name: 'joins items inside a quote',
+            input: '&gt - a\n&gt - <>b',
+            act: backspace,
+            expected: '&gt - a <>b',
+            config: { options: { enableBlockquoteExtension: true } },
+            undo: true,
+        },
+        {
+            name: 'shift+backspace deletes one character',
+            input: '- a\n- <>b',
+            act: press('Shift+Backspace'),
+            expected: '- a\n-<>b',
+        },
+        { name: 'is plain in a code block', input: '```\n- a\n- <>b', act: backspace, expected: '```\n- a\n-<>b' },
+        {
+            name: 'is plain without prefix wrapping',
+            input: '- a\n- <>b',
+            act: backspace,
+            expected: '- a\n-<>b',
+            config: { options: { enablePrefixWrappingExtension: false } },
+        },
+    ]);
 });
 
 test.describe('other keys', () => {

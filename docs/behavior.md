@@ -14,7 +14,7 @@ Throughout the page, `│` marks the caret.
 - **The caret stays in view.** Browsers don't scroll to the caret after a programmatic edit, so the editor
   does it itself.
 - **Shift is the escape hatch.** Shift+Enter and Shift+Backspace always do the plain textarea thing, even
-  inside lists and quotes.
+  inside lists and quotes, for example to delete just one character of a list marker.
 - **Typing in an input method (IME) is left alone.** While a composition is in progress, for example when
   typing Japanese or Chinese, Enter belongs to the input method, not to the editor.
 - **Code is code.** Inside a fenced code block (` ``` `) the editor doesn't continue lists, doesn't turn `--`
@@ -59,7 +59,7 @@ markers too.
 Extensions are the behaviors that react to typing. Each one has an option, and you can try every one of
 them on and off in the playground.
 
-### Lists continue on Enter — `enablePrefixWrappingExtension` (on by default)
+### Lists continue on Enter and join on Backspace — `enablePrefixWrappingExtension` (on by default)
 
 Press Enter at the end of a list item and the next line starts with the next marker:
 
@@ -78,6 +78,21 @@ quote). With the caret before the
 item's text, Enter is a plain line break.
 
 The `customPrefixWrapping` option adds your own prefixes to continue, such as `// ` or `| `.
+
+Backspace with the caret right after a list marker (and its checkbox) works on the item as a whole instead of
+breaking the marker into a stray `-`:
+
+| Before                      | After Backspace           |                                                  |
+| --------------------------- | ------------------------- | ------------------------------------------------ |
+| `- a`, `- │b`               | `- a │b`                  | joins the item above, with one space             |
+| `- a`, `- │`                | `- a│`                    | removes the empty item, undoing an Enter          |
+| `> - a`, `> - │b`           | `> - a │b`                | the same inside a quote                           |
+| `- a`, `    - │b`           | `- a`, `- │b`             | a nested first item moves out one level           |
+| `- │b` (no item above)      | `│b`                      | removes the marker and its indent                 |
+
+Only an item right above counts: after a blank line (a loose list) or a continuation line, the marker is
+removed instead. Ordered lists aren't renumbered, as with Enter. Indents are compared in spaces. With
+just `enableBlockquoteExtension` on, this happens only for lists inside quotes, the same as Enter.
 
 ### Ordered list auto-correct — `enableOrderedListAutoCorrectExtension` (off by default)
 
@@ -147,5 +162,7 @@ predictable:
 1. **Enter** is handled in one place. The rules are tried in turn: your custom prefixes, then lists, then
    quotes. The first that applies wins, so a list inside a quote continues as a list, and only an empty quote
    line triggers the paragraph-break behavior. The ordered list auto-correct happens before any of them.
-2. **Paste** goes to the quote extension first, then to the link paste. A single URL pasted onto a selection
+2. **Backspace** is handled in one place too: lists, then quotes. With the caret after `> - `, the list
+   rule takes it; with the caret right after `> `, the quote rule does.
+3. **Paste** goes to the quote extension first, then to the link paste. A single URL pasted onto a selection
    inside a quote still becomes a link.

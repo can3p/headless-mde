@@ -8,6 +8,7 @@ import {
     enterExtension,
     emDashExtension,
     blockquoteExtension,
+    backspaceExtension,
 } from './extensions';
 import {
     Command,
@@ -68,7 +69,9 @@ export const bootstrapTextareaMarkdown = (textarea: HTMLTextAreaElement, config:
             options.enableBlockquoteExtension ||
             options.enableOrderedListAutoCorrectExtension) &&
             enterExtension(textarea, options),
-        // backspace and paste on quoted lines, before link paste: later listeners skip prevented events
+        // one listener for backspace after list and quote markers, binds nothing when neither option is on
+        backspaceExtension(textarea, options),
+        // paste on quoted lines, before link paste: later listeners skip prevented events
         options.enableBlockquoteExtension && blockquoteExtension(textarea, options),
         options.enableIndentExtension && indentExtension(textarea, options),
         options.enableLinkPasteExtension && linkPasteExtension(textarea, options),
