@@ -325,6 +325,67 @@ describe('blockquote extension: paste', () => {
             act: () => userEvent.paste('x\ny'),
             expected: 'ax\ny<>',
         },
+        // already-quoted lines (#18)
+        {
+            description: 'pastes already-quoted lines as they are',
+            input: '&gt <>',
+            act: () => userEvent.paste('> a\n> b'),
+            expected: '&gt a\n&gt b<>',
+        },
+        {
+            description: 'keeps a pasted paragraph break',
+            input: '&gt <>',
+            act: () => userEvent.paste('> a\n>\n> b'),
+            expected: '&gt a\n&gt\n&gt b<>',
+        },
+        {
+            description: 'compares quote depth, not spelling',
+            input: '&gt&gt <>',
+            act: () => userEvent.paste('> > a\n>> b'),
+            expected: '&gt&gt a\n&gt&gt b<>',
+        },
+        {
+            description: 'keeps deeper pasted lines as they are',
+            input: '&gt <>',
+            act: () => userEvent.paste('> a\n> > b'),
+            expected: '&gt a\n&gt &gt b<>',
+        },
+        {
+            description: 'a trailing line break keeps the quote for the text after the caret',
+            input: '&gt <>rest',
+            act: () => userEvent.paste('> a\n> b\n'),
+            expected: '&gt a\n&gt b\n&gt <>rest',
+        },
+        {
+            description: 'a blank pasted line becomes a paragraph break',
+            input: '&gt <>',
+            act: () => userEvent.paste('> a\n\n> b'),
+            expected: '&gt a\n&gt\n&gt b<>',
+        },
+        {
+            description: 'mixed lines are quoted as usual',
+            input: '&gt <>',
+            act: () => userEvent.paste('a\n> b'),
+            expected: '&gt a\n&gt &gt b<>',
+        },
+        {
+            description: 'shallower lines are quoted as usual',
+            input: '&gt &gt <>',
+            act: () => userEvent.paste('> a\n> b'),
+            expected: '&gt &gt &gt a\n&gt &gt &gt b<>',
+        },
+        {
+            description: 'already-quoted lines inside a code block in a quote are code',
+            input: '&gt ```\n&gt <>',
+            act: () => userEvent.paste('> a\n> b'),
+            expected: '&gt ```\n&gt &gt a\n&gt &gt b<>',
+        },
+        {
+            description: 'a single quoted line pastes as usual',
+            input: '&gt <>',
+            act: () => userEvent.paste('> a'),
+            expected: '&gt &gt a<>',
+        },
     ]);
 });
 

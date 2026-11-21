@@ -308,6 +308,7 @@ Lists continue inside quotes on `enter` whichever of `enablePrefixWrappingExtens
 | `> │b` on the first line of a quote            | `backspace`       | `│b`: removes one quote level                                 |
 | inside a code block                            | `enter`, `backspace`, paste | only keeps the markers of the quote holding the block; outside a quote nothing changes |
 | inside a quote                                 | paste of lines    | every pasted line is quoted, blank lines become `>`           |
+| `> │`, lines copied from a quote (`> a`, `> b`) | paste of lines    | `> a`, `> b`: lines already quoted at least as deep are pasted as they are |
 | anywhere, lists included                       | `shift+enter`, `shift+backspace` | plain textarea behavior                        |
 
 ---

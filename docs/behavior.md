@@ -101,6 +101,12 @@ way you'd expect in an email client:
 | `>`, `> │b` after a paragraph break    | Backspace | removes the break                                 |
 | `> │b` on the first line of a quote    | Backspace | `│b`: removes one quote level                     |
 | inside a quote                         | Paste of several lines | every line after the first gets the markers, blank lines become `>` |
+| `> │`, pasting `> a` and `> b`         | Paste of several lines | `> a`, `> b`: the lines are already quoted, so they stay as they are |
+
+Pasted lines count as already quoted when every line with text has at least the caret line's quote depth
+(`>>` and `> >` are the same depth). The first one then loses the markers the caret is already after.
+When only some lines are quoted, say a copy that started in the middle of a quoted line, every line is
+quoted again as usual. A single pasted line is always pasted as it is.
 
 Inside a code block that sits in a quote, only the markers of that quote are kept; a code block outside any
 quote is left completely alone.

@@ -1,6 +1,7 @@
 import { Cursor, Line } from './Cursor';
 import { CaretContext, caretContext, TextEdit } from './caretContext';
-import { OpenFence, quoteBlank, quoteContinuation, quoteOuter, quotePrefix } from './utils';
+import { parseLinePrefix } from './linePrefix';
+import { OpenFence, quoteBlank, quoteContinuation, quoteOuter, quotePrefix, takeQuoteLevels } from './utils';
 
 const M = Cursor.MARKER;
 
@@ -137,10 +138,44 @@ export const quoteBackspaceRule = (context: CaretContext): TextEdit | null => {
 export const quoteBackspace = (value: string, start: number, end: number): TextEdit | null =>
     quoteBackspaceRule(caretContext(value, start, end));
 
+/** Every non-blank line already carries at least `depth` quote levels, and one line isn't blank */
+const allQuoted = (lines: string[], depth: number) => {
+    const filled = lines.filter((l) => l.trim() !== '');
+    return filled.length > 0 && filled.every((l) => parseLinePrefix(l).depth >= depth);
+};
+
 /**
- * Paste of several lines into a quote: every pasted line gets the quote markers,
- * blank lines become paragraph breaks (`>` lines). Inside a code block in the quote
- * lines get the markers as they are. `value` is LF-only, as a textarea gives it; the clipboard may have CRLF.
+ * Lines copied from a quote at least as deep as the caret's: the first loses the markers the caret is
+ * already after, the others stay as they are. Blank lines get the caret's markers: in between as a
+ * paragraph break, as the last line for the text after the caret.
+ */
+const pasteQuotedLines = (lines: string[], { quote, depth }: QuotedCaret) =>
+    lines.map((l, index) => {
+        if (index === 0) {
+            return takeQuoteLevels(l, depth).rest;
+        }
+        if (l.trim() !== '') {
+            return l;
+        }
+        return quotePrefix(quote, index === lines.length - 1);
+    });
+
+/** Lines from anywhere else: every line after the first gets the caret's markers */
+const quoteLines = (lines: string[], { quote, inCode }: QuotedCaret) =>
+    lines.map((l, index) => {
+        if (index === 0) {
+            return l;
+        }
+        // the last line continues with the text after the caret, so it keeps the full markers
+        const isLast = index === lines.length - 1;
+        return quotePrefix(quote, inCode || l.trim() !== '' || isLast) + l;
+    });
+
+/**
+ * Paste of several lines into a quote: every pasted line gets the quote markers, blank lines become
+ * paragraph breaks (`>` lines). Lines that are already quoted at least as deep as the caret line are
+ * pasted as they are. Inside a code block in the quote lines get the markers as they are.
+ * `value` is LF-only, as a textarea gives it; the clipboard may have CRLF.
  */
 export const quotePaste = (value: string, start: number, end: number, clipboard: string): TextEdit | null => {
     const pasted = clipboard.replace(/\r\n?/g, '\n');
@@ -154,18 +189,7 @@ export const quotePaste = (value: string, start: number, end: number, clipboard:
         return null;
     }
 
-    const { quote } = caret;
-    const pastedLines = pasted.split('\n');
-    const text = pastedLines
-        .map((l, index) => {
-            if (index === 0) {
-                return l;
-            }
-            // the last line continues with the text after the caret, so it keeps the full markers
-            const isLast = index === pastedLines.length - 1;
-            return quotePrefix(quote, caret.inCode || l.trim() !== '' || isLast) + l;
-        })
-        .join('\n');
-
-    return { from: start, to: end, text: text + M };
+    const lines = pasted.split('\n');
+    const paste = !caret.inCode && allQuoted(lines, caret.depth) ? pasteQuotedLines : quoteLines;
+    return { from: start, to: end, text: paste(lines, caret).join('\n') + M };
 };
