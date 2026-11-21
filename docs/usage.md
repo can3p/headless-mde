@@ -69,7 +69,7 @@ disabled, or added with your own handler:
 bootstrapTextareaMarkdown(textarea, {
     options: { enableEmDashExtension: false, preferredUnorderedListSyntax: '-' },
     commands: [
-        { name: 'code', shortcut: ['command+/', 'ctrl+/'] },
+        { name: 'code', shortcut: ['command+/', 'ctrl+/'], shortcutPreventDefault: true },
         { name: 'shrug', handler: ({ cursor }) => cursor.insert(`¯\\_(ツ)_/¯${cursor.MARKER}`) },
     ],
 });

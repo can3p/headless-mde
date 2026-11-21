@@ -116,6 +116,44 @@ describe('bootstrapTextareaMarkdown', () => {
         dispose();
     });
 
+    describe('shortcutPreventDefault on a built-in override', () => {
+        const pressCtrlSlash = () => {
+            const event = new KeyboardEvent('keydown', { key: '/', code: 'Slash', ctrlKey: true, cancelable: true });
+            textarea.dispatchEvent(event);
+            return event;
+        };
+
+        it.each([
+            [true, true],
+            [undefined, false],
+        ])('shortcutPreventDefault: %s → defaultPrevented %s', (flag, prevented) => {
+            textarea.value = 'text';
+            textarea.setSelectionRange(0, 4);
+            const { dispose } = bootstrapTextareaMarkdown(textarea, {
+                commands: [{ name: 'code', shortcut: ['command+/', 'ctrl+/'], shortcutPreventDefault: flag }],
+            });
+
+            const event = pressCtrlSlash();
+
+            expect(textarea.value).toBe('`text`');
+            expect(event.defaultPrevented).toBe(prevented);
+            dispose();
+        });
+
+        it('keeps enable: false', () => {
+            textarea.value = 'text';
+            textarea.setSelectionRange(0, 4);
+            const { dispose } = bootstrapTextareaMarkdown(textarea, {
+                commands: [{ name: 'code', shortcut: 'ctrl+/', enable: false }],
+            });
+
+            pressCtrlSlash();
+
+            expect(textarea.value).toBe('text');
+            dispose();
+        });
+    });
+
     it('should throw error for custom command without handler', () => {
         expect(() => {
             bootstrapTextareaMarkdown(textarea, {

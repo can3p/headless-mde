@@ -105,6 +105,7 @@ const mergedCommandsList = (customCommands: Command[] = []) => {
                 handler: commands[commandIndex].handler!,
                 enable: command.enable,
                 shortcut: command.shortcut,
+                shortcutPreventDefault: command.shortcutPreventDefault,
             };
 
             commands[commandIndex] = overrides;
