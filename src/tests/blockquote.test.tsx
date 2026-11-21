@@ -381,6 +381,18 @@ describe('blockquote extension: paste', () => {
             expected: '&gt ```\n&gt &gt a\n&gt &gt b<>',
         },
         {
+            description: 'quoted list items after a list marker keep one marker',
+            input: '&gt - <>',
+            act: () => userEvent.paste('> - a\n> - b'),
+            expected: '&gt - a\n&gt - b<>',
+        },
+        {
+            description: 'quoted list items after quote markers keep their marker',
+            input: '&gt <>',
+            act: () => userEvent.paste('> - a\n> - b'),
+            expected: '&gt - a\n&gt - b<>',
+        },
+        {
             description: 'a single quoted line pastes as usual',
             input: '&gt <>',
             act: () => userEvent.paste('> a'),

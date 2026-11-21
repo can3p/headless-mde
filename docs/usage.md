@@ -75,6 +75,9 @@ bootstrapTextareaMarkdown(textarea, {
 });
 ```
 
+An entry named after a built-in command changes only the fields it sets: `{ name: 'bold', enable: false }`
+turns bold off, and the rest, such as its Ctrl/Cmd+B shortcut, stays as it was.
+
 In a handler, `cursor.MARKER` marks where the caret lands after the edit; two markers select the text between
 them. The full list of options, commands and their defaults is in the
 [README](https://github.com/can3p/headless-mde#api). What each behavior actually does is described in

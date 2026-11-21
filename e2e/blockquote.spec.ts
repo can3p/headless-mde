@@ -174,6 +174,13 @@ test.describe('blockquote: paste', () => {
                 undo: true,
             },
             {
+                name: 'pastes quoted list items after a list marker',
+                input: '&gt - <>',
+                act: paste('> - a\n> - b'),
+                expected: '&gt - a\n&gt - b<>',
+                undo: true,
+            },
+            {
                 name: 'quotes mixed lines as usual',
                 input: '&gt <>',
                 act: paste('a\n> b'),

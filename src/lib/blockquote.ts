@@ -1,6 +1,6 @@
 import { Cursor, Line } from './Cursor';
 import { CaretContext, caretContext, TextEdit } from './caretContext';
-import { parseLinePrefix } from './linePrefix';
+import { parseLinePrefix, prefixLength } from './linePrefix';
 import { OpenFence, quoteBlank, quoteContinuation, quoteOuter, quotePrefix, takeQuoteLevels } from './utils';
 
 const M = Cursor.MARKER;
@@ -145,19 +145,30 @@ const allQuoted = (lines: string[], depth: number) => {
 };
 
 /**
- * Lines copied from a quote at least as deep as the caret's: the first loses the markers the caret is
+ * The first pasted line without the markup the caret is already after: its quote levels and, with the
+ * caret right after a list marker, its own list marker
+ */
+const firstPastedLine = (line: string, { depth }: QuotedCaret, { prefix, column }: CaretContext) => {
+    const rest = takeQuoteLevels(line, depth).rest;
+    const pastedPrefix = parseLinePrefix(rest, 0);
+    const afterListMarker = prefix.list !== null && column === prefixLength(prefix);
+    return afterListMarker && pastedPrefix.list ? rest.slice(prefixLength(pastedPrefix)) : rest;
+};
+
+/**
+ * Lines copied from a quote at least as deep as the caret's: the first loses the markup the caret is
  * already after, the others stay as they are. Blank lines get the caret's markers: in between as a
  * paragraph break, as the last line for the text after the caret.
  */
-const pasteQuotedLines = (lines: string[], { quote, depth }: QuotedCaret) =>
+const pasteQuotedLines = (lines: string[], caret: QuotedCaret, context: CaretContext) =>
     lines.map((l, index) => {
         if (index === 0) {
-            return takeQuoteLevels(l, depth).rest;
+            return firstPastedLine(l, caret, context);
         }
         if (l.trim() !== '') {
             return l;
         }
-        return quotePrefix(quote, index === lines.length - 1);
+        return quotePrefix(caret.quote, index === lines.length - 1);
     });
 
 /** Lines from anywhere else: every line after the first gets the caret's markers */
@@ -184,12 +195,13 @@ export const quotePaste = (value: string, start: number, end: number, clipboard:
     }
 
     // the caret may sit on a selection: describe its start
-    const caret = quotedCaretAt(caretContext(value, start, start));
+    const context = caretContext(value, start, start);
+    const caret = quotedCaretAt(context);
     if (!caret) {
         return null;
     }
 
     const lines = pasted.split('\n');
     const paste = !caret.inCode && allQuoted(lines, caret.depth) ? pasteQuotedLines : quoteLines;
-    return { from: start, to: end, text: paste(lines, caret).join('\n') + M };
+    return { from: start, to: end, text: paste(lines, caret, context).join('\n') + M };
 };

@@ -13,11 +13,14 @@ const M = Cursor.MARKER;
  * - `none`: no item (the first line, text, a blank line, another quote depth)
  * Indents are compared by length, so spaces only.
  */
-const relationToPrev = (prefix: LinePrefix, prev: CaretContext['prev']): 'sibling' | 'parent' | 'none' => {
+const relationToPrev = (
+    prefix: LinePrefix,
+    prev: CaretContext['prev'],
+): { relation: 'sibling' | 'parent'; prev: NonNullable<CaretContext['prev']> } | { relation: 'none' } => {
     if (!prev || !prev.prefix.list || prev.prefix.depth !== prefix.depth) {
-        return 'none';
+        return { relation: 'none' };
     }
-    return prev.prefix.indent.length >= prefix.indent.length ? 'sibling' : 'parent';
+    return { relation: prev.prefix.indent.length >= prefix.indent.length ? 'sibling' : 'parent', prev };
 };
 
 /**
@@ -35,17 +38,22 @@ export const listBackspace: EditRule = ({ start, end, fence, line, column, prefi
     }
     const contentStart = line.startsAt + column;
 
-    switch (relationToPrev(prefix, prev)) {
+    const above = relationToPrev(prefix, prev);
+    switch (above.relation) {
         case 'sibling': {
             if (content.trim() === '') {
-                return { from: prev!.line.endsAt, to: line.endsAt, text: M };
+                return { from: above.prev.line.endsAt, to: line.endsAt, text: M };
             }
-            const separator = /\s$/.test(prev!.line.text) ? '' : ' ';
-            return { from: prev!.line.endsAt, to: contentStart, text: separator + M };
+            const separator = /\s$/.test(above.prev.line.text) ? '' : ' ';
+            return { from: above.prev.line.endsAt, to: contentStart, text: separator + M };
         }
         case 'parent': {
             const markup = list.marker + list.spacing + (list.checkbox ?? '');
-            return { from: line.startsAt + quote.length, to: contentStart, text: prev!.prefix.indent + markup + M };
+            return {
+                from: line.startsAt + quote.length,
+                to: contentStart,
+                text: above.prev.prefix.indent + markup + M,
+            };
         }
         case 'none':
             return { from: line.startsAt + quote.length, to: contentStart, text: M };

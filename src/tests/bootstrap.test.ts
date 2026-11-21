@@ -140,6 +140,21 @@ describe('bootstrapTextareaMarkdown', () => {
             dispose();
         });
 
+        it('keeps the built-in shortcut when only the flag is given', () => {
+            textarea.value = 'text';
+            textarea.setSelectionRange(0, 4);
+            const { dispose } = bootstrapTextareaMarkdown(textarea, {
+                commands: [{ name: 'bold', shortcutPreventDefault: true }],
+            });
+
+            const event = new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', ctrlKey: true, cancelable: true });
+            textarea.dispatchEvent(event);
+
+            expect(textarea.value).toBe('**text**');
+            expect(event.defaultPrevented).toBe(true);
+            dispose();
+        });
+
         it('keeps enable: false', () => {
             textarea.value = 'text';
             textarea.setSelectionRange(0, 4);

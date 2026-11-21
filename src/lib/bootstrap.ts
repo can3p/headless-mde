@@ -103,12 +103,13 @@ const mergedCommandsList = (customCommands: Command[] = []) => {
         if (BUILT_IN_COMMANDS.includes(command.name as any)) {
             const commandIndex = buildInCommands.findIndex((x) => x.name === command.name)!;
 
+            // the fields the override sets replace the built-in ones, the others are kept
+            const set = Object.fromEntries(Object.entries(command).filter(([, value]) => value !== undefined));
             const overrides: CommandConfig = {
+                ...commands[commandIndex],
+                ...set,
                 name: commands[commandIndex].name,
                 handler: commands[commandIndex].handler!,
-                enable: command.enable,
-                shortcut: command.shortcut,
-                shortcutPreventDefault: command.shortcutPreventDefault,
             };
 
             commands[commandIndex] = overrides;
