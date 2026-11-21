@@ -93,5 +93,18 @@ test.describe('other keys', () => {
             expected: 'a<>',
             undo: true,
         },
+        {
+            name: 'ctrl+backspace removes an empty first line',
+            input: '<>\ntext',
+            act: press('ControlOrMeta+Backspace'),
+            expected: '<>text',
+            undo: true,
+        },
+        {
+            name: 'ctrl+backspace on the only, empty line',
+            input: '<>',
+            act: press('ControlOrMeta+Backspace'),
+            expected: '<>',
+        },
     ]);
 });
