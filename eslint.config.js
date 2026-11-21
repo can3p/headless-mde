@@ -48,6 +48,7 @@ export default tseslint.config(
             '*.config.js',
             '*.config.cjs',
             'e2e/fixture/main.js',
+            'site/dist/**',
             'playwright-report/**',
             'test-results/**',
         ],

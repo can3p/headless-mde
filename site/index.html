@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>headless-mde</title>
+        <meta name="description" content="A headless markdown editor for a plain textarea: try every behavior in the browser." />
+        <link rel="stylesheet" href="./style.css" />
+    </head>
+    <body>
+        <header class="top">
+            <div class="wrap">
+                <a class="brand" href="#">headless-mde <span class="version">v{{version}}</span></a>
+                <nav>
+                    <a href="#playground">Playground</a>
+                    <a href="#usage">Getting started</a>
+                    <a href="#behavior">Behavior</a>
+                    <a href="https://github.com/can3p/headless-mde">GitHub</a>
+                    <a href="https://www.npmjs.com/package/@can3p/headless-mde">npm</a>
+                </nav>
+            </div>
+        </header>
+
+        <main class="wrap">
+            <section class="intro">
+                <h1>Markdown editing for a plain <code>&lt;textarea&gt;</code></h1>
+                <p>
+                    Lists that continue on Enter, Tab that indents, quotes that keep their markers, toolbar commands
+                    and shortcuts. No UI of its own, no rendering, and undo works the way it should. Try it below,
+                    and switch the behaviors on and off to see what each one does.
+                </p>
+            </section>
+
+            <section id="playground" class="playground">
+                <div class="editor-pane">
+                    <div id="toolbar" class="toolbar" role="toolbar" aria-label="Formatting"></div>
+                    <textarea id="editor" spellcheck="false" aria-label="Markdown editor"></textarea>
+                    <div class="row">
+                        <button id="reset" type="button" class="link-button">Restore the sample text</button>
+                    </div>
+                    <h2 class="pane-title">Preview</h2>
+                    <div id="preview" class="preview"></div>
+                </div>
+                <aside class="side">
+                    <h2 class="pane-title">Extensions</h2>
+                    <div id="extensions" class="toggles"></div>
+                    <h2 class="pane-title">Your setup</h2>
+                    <pre class="setup"><code id="setup"></code></pre>
+                </aside>
+            </section>
+
+            <section id="usage" class="doc">{{doc:usage}}</section>
+            <section id="behavior" class="doc">{{doc:behavior}}</section>
+        </main>
+
+        <footer class="wrap footer">
+            MIT licensed. A fork of
+            <a href="https://github.com/Resetand/textarea-markdown-editor">textarea-markdown-editor</a> by Resetand.
+            This page runs v{{version}}.
+        </footer>
+
+        <script type="module" src="./main.js"></script>
+    </body>
+</html>

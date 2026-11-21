@@ -11,11 +11,16 @@ A headless markdown editor for a plain `<textarea>`, in TypeScript, ESM only, wi
   `types.ts`; `bootstrap.ts` registers them in order, and the order matters when two handle the same key.
 - `src/lib/blockquote.ts`: pure functions for Enter, Backspace and paste inside quotes.
 - `src/lib/utils.ts`: pure helpers (lines, quote markers, fenced code detection).
+- `docs/`: the human-facing guide (`usage.md`) and behavior reference (`behavior.md`), rendered on the project site.
+- `site/`: the project site (GitHub Pages), a playground built from `src/lib` plus the docs. `site/catalog.ts`
+  holds the label and description of every extension and built-in command, typed so a new one fails the
+  typecheck until it is described. `npm run start-site` serves it; `e2e/site.spec.ts` smoke-tests it.
 - Tests live in `src/tests` (jest + jsdom) and `e2e/` (Playwright: Chromium, Firefox, WebKit). jsdom has no
   `document.execCommand` and no layout, so there `fireInput` sets the value directly and `revealCaret` does
   nothing.
 
-Checks, all run by CI: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run test:browser`.
+Checks, all run by CI: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run build:site`,
+`npm run test:browser`.
 
 ## Which suite a change needs
 
@@ -34,6 +39,10 @@ Browsers: `npx playwright install --with-deps chromium firefox webkit`.
 1. **Plan, then critic.** Before changing `src/` for a feature, fix or refactor, write a plan and run the
    `critic` skill (`.claude/skills/critic/SKILL.md`) on it. Revise the plan for every blocker it finds.
 2. **Implement**, with a test for each behavior and each bug fixed.
+   **Keep the docs and the site current in the same change**: a new or changed behavior goes into
+   `docs/behavior.md` (plain words, examples with `│` for the caret), a new option or command into the README
+   API tables and `site/catalog.ts`, and a new behavior worth trying into the playground's sample text in
+   `site/main.ts`. `src/tests/site.test.ts` checks that every extension is in the behavior doc with its default.
 3. **Implementation review.** Once lint, types and tests pass, and before pushing or updating a PR,
    run the `implementation-review` skill (`.claude/skills/implementation-review/SKILL.md`) on the diff.
    Fix its blockers and regressions in the same change.
