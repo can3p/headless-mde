@@ -15,6 +15,13 @@ test.describe('lists: enter', () => {
         { name: 'leaves an empty unordered item', input: '- a\n- <>', act: enter, expected: '- a\n\n<>', undo: true },
         { name: 'leaves an empty ordered item', input: '1. a\n2. <>', act: enter, expected: '1. a\n\n<>' },
         { name: 'is a plain line break outside a list', input: 'a<>', act: enter, expected: 'a\n<>' },
+        { name: 'continues a plus list', input: '+ a<>', act: enter, expected: '+ a\n+ <>' },
+        { name: 'continues a parenthesis list', input: '1) a<>', act: enter, expected: '1) a\n2) <>', undo: true },
+        { name: 'continues a task list', input: '- [x] a<>', act: enter, expected: '- [x] a\n- [ ] <>' },
+        { name: 'continues a list in a quote', input: '&gt - a<>', act: enter, expected: '&gt - a\n&gt - <>', undo: true },
+        { name: 'leaves a list in a quote', input: '&gt - <>', act: enter, expected: '&gt <>' },
+        { name: 'numpad enter continues a list', input: '- a<>', act: press('NumpadEnter'), expected: '- a\n- <>' },
+        { name: 'is a plain line break before the marker', input: '<>- a', act: enter, expected: '\n<>- a' },
         {
             name: 'is a plain line break in a code block',
             input: '```\n- a<>\n```',
@@ -57,6 +64,16 @@ test.describe('ordered list auto-correct', () => {
         [
             { name: 'corrects and continues', input: '1) a<>', act: press('Enter', 'x'), expected: '1. a\n2. x<>' },
             { name: 'corrects a nested item', input: '1.1)a<>', act: enter, expected: '1.1. a\n1.2. <>' },
+            { name: 'is one undo step', input: '1)a<>', act: enter, expected: '1. a\n2. <>', undo: true },
+            {
+                name: 'corrects without prefix wrapping',
+                input: '1)a<>',
+                act: press('Enter', 'x'),
+                expected: '1. a\nx<>',
+                config: { options: { enablePrefixWrappingExtension: false } },
+                undo: false,
+            },
+            { name: 'leaves code blocks alone', input: '```\n1)a<>', act: enter, expected: '```\n1)a\n<>' },
         ],
         { options: { enableOrderedListAutoCorrectExtension: true } },
     );

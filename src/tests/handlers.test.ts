@@ -102,6 +102,23 @@ describe('orderedListCommandHandler', () => {
         orderedListCommandHandler(ctx);
         expect(ctx.textarea.value).toBe('1. one\n2. two\n3. three');
     });
+
+    it.each([
+        ['1) item', 'item'],
+        ['1.1. item', 'item'],
+        ['  1. item', '  item'],
+        ['> 1. [ ] item', '> [ ] item'],
+    ])('should remove the ordered list marker of %j', (input, expected) => {
+        const ctx = createContext(input, 0, 0);
+        orderedListCommandHandler(ctx);
+        expect(ctx.textarea.value).toBe(expected);
+    });
+
+    it('should add a marker in front of an unordered item', () => {
+        const ctx = createContext('- item', 0, 0);
+        orderedListCommandHandler(ctx);
+        expect(ctx.textarea.value).toBe('1. - item');
+    });
 });
 
 describe('unorderedListCommandHandler', () => {
@@ -121,6 +138,24 @@ describe('unorderedListCommandHandler', () => {
         const ctx = createContext('one\ntwo\nthree', 0, 13);
         unorderedListCommandHandler(ctx);
         expect(ctx.textarea.value).toBe('* one\n* two\n* three');
+    });
+
+    it.each([
+        ['> * [x] item', '> [x] item'],
+        ['>> * item', '>> item'],
+    ])('should remove the marker of %j', (input, expected) => {
+        const ctx = createContext(input, 0, 0);
+        unorderedListCommandHandler(ctx);
+        expect(ctx.textarea.value).toBe(expected);
+    });
+
+    it.each([
+        ['  * item', '*   * item'],
+        ['- item', '* - item'],
+    ])('should add a list around %j', (input, expected) => {
+        const ctx = createContext(input, 0, 0);
+        unorderedListCommandHandler(ctx);
+        expect(ctx.textarea.value).toBe(expected);
     });
 });
 

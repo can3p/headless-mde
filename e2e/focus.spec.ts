@@ -51,16 +51,3 @@ test.describe('edits while the textarea is not focused', () => {
         await expectValue(page, 'a ![](a.png) b!<>');
     });
 });
-
-test.describe('ordered list auto-correct', () => {
-    // BUG: auto-correct rewrites the line, then replays Enter for the list continuation: two edits.
-    // Follow-up: make the correction part of the continuation edit instead of a replayed keydown.
-    test.fail('is one undo step', async ({ page }) => {
-        await open(page, { options: { enableOrderedListAutoCorrectExtension: true } });
-        await setValue(page, '1) a<>');
-        await page.keyboard.press('Enter');
-        await expectValue(page, '1. a\n2. <>');
-        await page.keyboard.press('ControlOrMeta+z');
-        await expect.poll(() => getText(page), { timeout: 2000 }).toBe('1) a');
-    });
-});

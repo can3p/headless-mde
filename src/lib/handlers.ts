@@ -1,6 +1,7 @@
 import { CommandHandler } from './types';
-import { clamp, escapeRegExp, mapQuotedContent, quoteContinuation, quoteOuter, quotePrefix, splitQuotePrefix } from './utils';
+import { clamp, mapQuotedContent, quoteContinuation, quoteOuter, quotePrefix, splitQuotePrefix } from './utils';
 import { Cursor } from './Cursor';
+import { LinePrefix, parseLinePrefix } from './linePrefix';
 
 export const boldCommandHandler: CommandHandler = ({ cursor, options: { preferredBoldSyntax, boldPlaceholder } }) => {
     cursor.wrap(preferredBoldSyntax, { placeholder: boldPlaceholder });
@@ -30,30 +31,34 @@ export const imageCommandHandler: CommandHandler = ({ options, cursor }) => {
     cursor.insert(`![${imageText}](${Cursor.MARKER}${imageUrl}${Cursor.MARKER})`);
 };
 
-export const orderedListCommandHandler: CommandHandler = ({ cursor }) => {
-    const re = /(\d+\.){1,2}\s+/;
-    const lines = cursor.selection?.lines ?? [cursor.position.line];
-    const needUndo = lines.every((line) => re.test(splitQuotePrefix(line.text).rest));
+/** The line without its list marker, everything else as written */
+const withoutListMarker = ({ quote, indent, list, content }: LinePrefix) => quote + indent + (list?.checkbox ?? '') + content;
 
-    // list markers go after the blockquote markers
+/**
+ * Toggles a list on the current lines: removes the markers when `isItem` holds for every line, otherwise
+ * puts `marker(index)` in front of each line's content, after the blockquote markers
+ */
+const toggleList = (cursor: Cursor, isItem: (prefix: LinePrefix) => boolean, marker: (index: number) => string) => {
+    const lines = cursor.selection?.lines ?? [cursor.position.line];
+    const needUndo = lines.every((line) => isItem(parseLinePrefix(line.text)));
+
     cursor.replaceCurrentLines(
         (line, index) =>
-            mapQuotedContent(line.text, (content) => (needUndo ? content.replace(re, '') : `${index + 1}. ${content}`)),
+            needUndo
+                ? withoutListMarker(parseLinePrefix(line.text))
+                : mapQuotedContent(line.text, (content) => `${marker(index)} ${content}`),
         { selectReplaced: Boolean(cursor.selection) },
     );
 };
 
+export const orderedListCommandHandler: CommandHandler = ({ cursor }) => {
+    toggleList(cursor, ({ list }) => list !== null && /^\d/.test(list.marker), (index) => `${index + 1}.`);
+};
+
 export const unorderedListCommandHandler: CommandHandler = ({ cursor, options }) => {
     const syntax = options.preferredUnorderedListSyntax;
-    const re = new RegExp(`^${escapeRegExp(syntax)}\\s+`);
-    const lines = cursor.selection?.lines ?? [cursor.position.line];
-    const needUndo = lines.every((line) => re.test(splitQuotePrefix(line.text).rest));
-
-    // list markers go after the blockquote markers
-    cursor.replaceCurrentLines(
-        (line) => mapQuotedContent(line.text, (content) => (needUndo ? content.replace(re, '') : `${syntax} ${content}`)),
-        { selectReplaced: Boolean(cursor.selection) },
-    );
+    // an indented item is a nested list: the command adds a list around it instead
+    toggleList(cursor, ({ list, indent }) => list?.marker === syntax && indent === '', () => syntax);
 };
 
 export const codeBlockCommandHandler: CommandHandler = ({ cursor, options: { codeBlockPlaceholder } }) => {

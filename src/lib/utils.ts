@@ -139,7 +139,7 @@ export function escapeRegExp(str: string) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
-type OpenFence = {
+export type OpenFence = {
     character: string;
     length: number;
     /** Quote depth of the line that opened the fence, the fence lives inside that quote */

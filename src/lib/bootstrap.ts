@@ -5,8 +5,7 @@ import {
     properLineRemoveBehaviorExtension,
     indentExtension,
     linkPasteExtension,
-    prefixWrappingExtension,
-    orderedListAutoCorrectExtension,
+    enterExtension,
     emDashExtension,
     blockquoteExtension,
 } from './extensions';
@@ -64,13 +63,15 @@ export const bootstrapTextareaMarkdown = (textarea: HTMLTextAreaElement, config:
 
     // bootstrap extensions if enabled, extension can optionally returns a cleanup function, which will be called inside dispose
     const extensions = [
-        // auto-correct goes first: it rewrites the line and replays enter for the extensions below
-        options.enableOrderedListAutoCorrectExtension && orderedListAutoCorrectExtension(textarea, options),
-        // before prefix wrapping: it owns enter, backspace and paste on quoted lines, later listeners skip prevented events
+        // one listener for every enter behavior: prefix wrapping, blockquote and ordered list auto-correct
+        (options.enablePrefixWrappingExtension ||
+            options.enableBlockquoteExtension ||
+            options.enableOrderedListAutoCorrectExtension) &&
+            enterExtension(textarea, options),
+        // backspace and paste on quoted lines, before link paste: later listeners skip prevented events
         options.enableBlockquoteExtension && blockquoteExtension(textarea, options),
         options.enableIndentExtension && indentExtension(textarea, options),
         options.enableLinkPasteExtension && linkPasteExtension(textarea, options),
-        options.enablePrefixWrappingExtension && prefixWrappingExtension(textarea, options),
         options.enableProperLineRemoveBehaviorExtension && properLineRemoveBehaviorExtension(textarea, options),
         options.enableEmDashExtension && emDashExtension(textarea, options),
     ];

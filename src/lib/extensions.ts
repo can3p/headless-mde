@@ -1,16 +1,14 @@
-import { Extension, PrefixWrappingConfig } from './types';
+import { Extension } from './types';
 import {
-    escapeRegExp,
-    getIncrementedOrderedListPrefix,
     isBtwOrEq,
     isImageURL,
     isInsideFencedCodeBlock,
     isURL,
     metaCombination,
     mapQuotedContent,
-    splitQuotePrefix,
 } from './utils';
-import { quoteBackspace, quoteEnter, quotePaste, TextEdit } from './blockquote';
+import { quoteBackspace, quotePaste, TextEdit } from './blockquote';
+import { enterEdit, enterRules } from './enter';
 
 import { Cursor } from './Cursor';
 import { KeyboardShortcuts } from './keyboard';
@@ -125,85 +123,25 @@ export const indentExtension: Extension = (textarea) => {
 };
 
 /**
- * Handle next-line event. Will wrap current list sequence if needed
+ * Handle `enter`: continues lists and custom prefixes (`enablePrefixWrappingExtension`), quotes
+ * (`enableBlockquoteExtension`) and corrects `1)` list markers (`enableOrderedListAutoCorrectExtension`).
+ * One listener, so the rules run in the order `enterRules` gives, and every Enter is one edit, one undo step.
  */
-export const prefixWrappingExtension: Extension = (textarea, options) => {
+export const enterExtension: Extension = (textarea, options) => {
     const cursor = new Cursor(textarea);
-
-    const ensureRegExp = (value: RegExp | string) =>
-        value instanceof RegExp ? value : new RegExp(escapeRegExp(value));
-    const getLineRegExp = (prefixRe: RegExp) => new RegExp(`^\\s*(${prefixRe.source}).*$`);
-
-    const toConfig = (value: PrefixWrappingConfig | string): PrefixWrappingConfig =>
-        typeof value === 'string' ? { prefix: value, prefixPattern: ensureRegExp(value) } : value;
-
-    const getIndent = (text: string) => ' '.repeat(text.match(/^\s*/)?.[0].length ?? 0);
-
-    const customConfigs = options.customPrefixWrapping.map(toConfig);
-
-    const buildInConfigs: PrefixWrappingConfig[] = [
-        {
-            prefixPattern: /[-*]\s+/,
-            prefix: (line) => {
-                const match = /^\s*([-*])\s+/.exec(line.text);
-                return match ? `${match[1]} ` : `${options.preferredUnorderedListSyntax} `;
-            },
-            shouldBreakIfEmpty: true,
-            shouldSaveIndent: true,
-        },
-        {
-            prefixPattern: /(\d+\.){1,2}\s+/,
-            prefix: (line) =>
-                getIncrementedOrderedListPrefix(/^(\s*((\d+\.){1,2})\s+.*)$/.exec(line.text)?.[2] ?? '') + ' ',
-            shouldBreakIfEmpty: true,
-            shouldSaveIndent: true,
-        },
-    ];
-
-    const configs = [...customConfigs, ...buildInConfigs];
+    const rules = enterRules(options);
+    const autoCorrect = options.enableOrderedListAutoCorrectExtension;
 
     const keydownListener = (event: KeyboardEvent) => {
-        if (
-            !isPlainKeyPress(event) ||
-            event.code !== 'Enter' ||
-            isInsideFencedCodeBlock(cursor.value, cursor.position.cursorAt)
-        ) {
+        if (!isPlainKeyPress(event) || event.key !== 'Enter') {
             return;
         }
 
-        // entering line – is line on which the Enter was pressed
-        const enteringLine = cursor.lineAt(cursor.position.line.lineNumber)!;
-
-        const strictConfigs = configs.map((config) => {
-            const prefix = config.prefix instanceof Function ? config.prefix(enteringLine) : config.prefix;
-            const pattern = ensureRegExp(config.prefixPattern ?? prefix);
-            const shouldBreak =
-                config.shouldBreakIfEmpty === false ? false : !enteringLine.text.replace(pattern, '').trim();
-            const shouldSaveIndent = config.shouldSaveIndent !== false;
-            return { prefix, pattern, shouldBreak, shouldSaveIndent };
-        });
-
-        const matched = strictConfigs.find(({ pattern }) => getLineRegExp(pattern).test(enteringLine.text));
-
-        if (!matched) {
-            // no matches
-            return;
+        const edit = enterEdit(textarea.value, textarea.selectionStart, textarea.selectionEnd, rules, autoCorrect);
+        if (edit) {
+            event.preventDefault();
+            cursor.replaceRange(edit.from, edit.to, edit.text);
         }
-
-        const { prefix, shouldBreak, shouldSaveIndent } = matched;
-
-        // the whole Enter is one edit, so it is one undo step, and nothing waits for a newline
-        // that may never come (a replayed or prevented Enter, an IME commit)
-        event.preventDefault();
-
-        if (shouldBreak) {
-            // a list line without content leaves the list
-            cursor.replaceLine(enteringLine.lineNumber, '\n');
-            return;
-        }
-
-        const indent = shouldSaveIndent ? getIndent(enteringLine.text) : '';
-        cursor.insert(`\n${indent}${prefix}${Cursor.MARKER}`);
     };
 
     textarea.addEventListener('keydown', keydownListener);
@@ -247,43 +185,10 @@ export const properLineRemoveBehaviorExtension: Extension = (textarea) => {
     return () => keyboard.reset();
 };
 
-export const orderedListAutoCorrectExtension: Extension = (textarea) => {
-    const cursor = new Cursor(textarea);
-
-    // eg: 1)content | 1) content | 1.1)content
-    const INVALID_PATTERN = /^\s*(\d+(\.\d+)?\.?)\)\s*/;
-
-    const handler = (event: KeyboardEvent) => {
-        if (!isPlainKeyPress(event) || event.code !== 'Enter') {
-            return;
-        }
-
-        const { quote, rest: lineText } = splitQuotePrefix(cursor.position.line.text);
-        const match = lineText.match(INVALID_PATTERN);
-
-        if (!match) {
-            return;
-        }
-
-        event?.preventDefault();
-
-        const indent = ' '.repeat(lineText.match(/^\s*/)?.[0].length ?? 0);
-        const orderPrefix = match[1];
-        const newLineContent = `${quote}${indent}${orderPrefix}. ${lineText.slice(match[0].length)}`;
-
-        cursor.replaceLine(cursor.position.line.lineNumber, newLineContent);
-
-        textarea.dispatchEvent(new KeyboardEvent('keydown', event));
-    };
-
-    textarea.addEventListener('keydown', handler);
-    return () => textarea.removeEventListener('keydown', handler);
-};
-
 /**
- * Keeps blockquote markers in place while typing: Enter continues the quote, Backspace right after
- * the markers joins the line with the previous one, pasting several lines quotes each of them.
- * `shift+enter` and `shift+backspace` keep the plain textarea behavior.
+ * Keeps blockquote markers in place while typing: Backspace right after the markers joins the line with
+ * the previous one, pasting several lines quotes each of them (Enter is `enterExtension`'s).
+ * `shift+backspace` keeps the plain textarea behavior.
  */
 export const blockquoteExtension: Extension = (textarea) => {
     const cursor = new Cursor(textarea);
@@ -303,9 +208,7 @@ export const blockquoteExtension: Extension = (textarea) => {
 
         const { value, selectionStart, selectionEnd } = textarea;
 
-        if (event.key === 'Enter') {
-            apply(event, quoteEnter(value, selectionStart, selectionEnd));
-        } else if (event.key === 'Backspace') {
+        if (event.key === 'Backspace') {
             apply(event, quoteBackspace(value, selectionStart, selectionEnd));
         }
     };

@@ -186,6 +186,27 @@ describe('blockquote extension: enter', () => {
             options: { enableBlockquoteExtension: false },
             expected: '&gt text\n<>',
         },
+        {
+            description: 'continues a list inside a quote when the extension is disabled',
+            input: '&gt - item<>',
+            act: enter,
+            options: { enableBlockquoteExtension: false },
+            expected: '&gt - item\n&gt - <>',
+        },
+        {
+            description: 'continues a list inside a quote without prefix wrapping',
+            input: '&gt 1. item<>',
+            act: enter,
+            options: { enablePrefixWrappingExtension: false },
+            expected: '&gt 1. item\n&gt 2. <>',
+        },
+        {
+            description: 'continues a custom prefix inside a quote',
+            input: '&gt - [] todo<>',
+            act: enter,
+            options: { customPrefixWrapping: ['- [] '] },
+            expected: '&gt - [] todo\n&gt - [] <>',
+        },
     ]);
 });
 
