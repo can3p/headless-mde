@@ -289,7 +289,7 @@ export type CommandHandlerContext = {
 
 ### Blockquotes
 
-List, headline, code block and indent commands work after the `>` markers of a quoted line, so `> a` becomes `> * a`, not `* > a`.
+List, headline, code block and indent commands work after the `>` markers of a quoted line, so `> a` becomes `> * a`, not `* > a`. Inside a quote the code block command wraps whole lines, because its fences need the markers too. A code block opened inside a quote ends with the quote, and `>` inside a code block is code.
 
 With `enableBlockquoteExtension: true` the markers also take care of themselves while typing:
 
@@ -303,8 +303,9 @@ With `enableBlockquoteExtension: true` the markers also take care of themselves 
 | `> a`, `> │b`                                  | `backspace`       | `> a │b`: joins the lines                                     |
 | `>`, `> │b` (after a paragraph break)          | `backspace`       | removes the break                                             |
 | `> │b` on the first line of a quote            | `backspace`       | `│b`: removes one quote level                                 |
+| inside a code block                            | `enter`, `backspace`, paste | only keeps the markers of the quote holding the block; outside a quote nothing changes |
 | inside a quote                                 | paste of lines    | every pasted line is quoted, blank lines become `>`           |
-| anywhere                                       | `shift+enter`, `shift+backspace` | plain textarea behavior                        |
+| anywhere, lists included                       | `shift+enter`, `shift+backspace` | plain textarea behavior                        |
 
 ---
 

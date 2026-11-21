@@ -613,6 +613,19 @@ const testCases: TestCase[] = [
             1.2. <>`,
     },
 
+    {
+        description: 'should not continue a list on shift+enter',
+        input: '- item<>',
+        act: () => userEvent.keyboard('{Shift>}{Enter}{/Shift}'),
+        expected: '- item\n<>',
+    },
+    {
+        description: 'should not turn a quoted fence line into a closing fence of a code block',
+        input: '```\n&gt ```\n- item<>',
+        act: () => userEvent.keyboard('{enter}'),
+        expected: '```\n&gt ```\n- item\n<>',
+    },
+
     // ! Custom command
     {
         description: 'should insert and wrap emoji (custom command)',

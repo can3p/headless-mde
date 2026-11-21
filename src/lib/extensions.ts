@@ -7,9 +7,10 @@ import {
     isInsideFencedCodeBlock,
     isURL,
     metaCombination,
+    mapQuotedContent,
     splitQuotePrefix,
 } from './utils';
-import { quoteBackspace, quoteEnter, quotePaste, QuoteEdit } from './blockquote';
+import { quoteBackspace, quoteEnter, quotePaste, TextEdit } from './blockquote';
 
 import { Cursor } from './Cursor';
 import { KeyboardShortcuts } from './keyboard';
@@ -91,27 +92,18 @@ export const indentExtension: Extension = (textarea) => {
         } else {
             // If user is select line or lines - add Indent for each of this selected line, and keep selection
             // inside a blockquote the indentation goes after the quote markers
-            cursor.replaceCurrentLines(
-                (line) => {
-                    const { quote, rest } = splitQuotePrefix(line.text);
-                    return quote + indent + rest;
-                },
-                { selectReplaced: true },
-            );
+            cursor.replaceCurrentLines((line) => mapQuotedContent(line.text, (content) => indent + content), {
+                selectReplaced: true,
+            });
         }
     });
 
     keyboard.bind('shift+tab', (event) => {
         event?.preventDefault();
         cursor.replaceCurrentLines(
-            (line) => {
-                const { quote, rest } = splitQuotePrefix(line.text);
-                return quote + rest.replace(/^\s{0,4}/, '');
-            },
-            {
+            (line) => mapQuotedContent(line.text, (content) => content.replace(/^\s{0,4}/, '')),
             // select lines if something was selected
-                selectReplaced: Boolean(cursor.selection),
-            },
+            { selectReplaced: Boolean(cursor.selection) },
         );
     });
 
@@ -160,6 +152,8 @@ export const prefixWrappingExtension: Extension = (textarea, options) => {
         if (
             event.defaultPrevented ||
             event.code !== 'Enter' ||
+            // shift+enter is the plain line break
+            event.shiftKey ||
             isInsideFencedCodeBlock(cursor.value, cursor.position.cursorAt)
         ) {
             return;
@@ -259,7 +253,7 @@ export const orderedListAutoCorrectExtension: Extension = (textarea) => {
     const INVALID_PATTERN = /^\s*(\d+(\.\d+)?\.?)\)\s*/;
 
     const handler = (event: KeyboardEvent) => {
-        if (event.defaultPrevented || event.code !== 'Enter') {
+        if (event.defaultPrevented || event.code !== 'Enter' || event.shiftKey) {
             return;
         }
 
@@ -293,7 +287,7 @@ export const orderedListAutoCorrectExtension: Extension = (textarea) => {
 export const blockquoteExtension: Extension = (textarea) => {
     const cursor = new Cursor(textarea);
 
-    const apply = (event: Event, edit: QuoteEdit | null) => {
+    const apply = (event: Event, edit: TextEdit | null) => {
         if (!edit) {
             return;
         }

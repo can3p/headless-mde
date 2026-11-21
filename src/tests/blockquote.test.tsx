@@ -157,6 +157,25 @@ describe('blockquote extension: enter', () => {
             expected: '&gt ```\n&gt - code\n&gt <>',
         },
         {
+            description: 'moves the list marker with the text when the caret is before it',
+            input: '&gt <>- item',
+            act: enter,
+            expected: '&gt \n&gt <>- item',
+        },
+        {
+            description: 'does not quote code lines inside a code block outside a quote',
+            input: '```\n&gt code<>',
+            act: enter,
+            expected: '```\n&gt code\n<>',
+        },
+        {
+            description: 'auto-corrects an ordered list inside a quote before continuing it',
+            input: '&gt 1)item<>',
+            act: enter,
+            options: { enableOrderedListAutoCorrectExtension: true },
+            expected: '&gt 1. item\n&gt 2. <>',
+        },
+        {
             description: 'keeps a plain new line on shift+enter',
             input: '&gt text<>',
             act: () => userEvent.keyboard('{Shift>}{Enter}{/Shift}'),
@@ -217,6 +236,18 @@ describe('blockquote extension: backspace', () => {
             expected: '&gt outer\n&gt <>inner',
         },
         {
+            description: 'joins the line with a deeper quoted line it already continues',
+            input: '&gt &gt inner\n&gt <>text',
+            act: backspace,
+            expected: '&gt &gt inner <>text',
+        },
+        {
+            description: 'deletes one character inside a code block in the quote',
+            input: '&gt ```\n&gt a\n&gt <>b',
+            act: backspace,
+            expected: '&gt ```\n&gt a\n&gt<>b',
+        },
+        {
             description: 'deletes one character on shift+backspace',
             input: '&gt the quote begins\n&gt <>and continues',
             act: () => userEvent.keyboard('{Shift>}{Backspace}{/Shift}'),
@@ -256,6 +287,12 @@ describe('blockquote extension: paste', () => {
             input: '&gt <old>',
             act: () => userEvent.paste('new\nlines'),
             expected: '&gt new\n&gt lines<>',
+        },
+        {
+            description: 'pastes code lines as they are inside a code block outside a quote',
+            input: '```\n&gt a<>',
+            act: () => userEvent.paste('x\ny'),
+            expected: '```\n&gt ax\ny<>',
         },
         {
             description: 'pastes a single line as usual',
@@ -388,5 +425,20 @@ describe('quote helpers', () => {
     test('fenced code block inside a quote is detected', () => {
         expect(isInsideFencedCodeBlock('> ```\n> code', 12)).toBe(true);
         expect(isInsideFencedCodeBlock('> ```\n> code\n> ```\n> text', 24)).toBe(false);
+    });
+
+    test('a quoted fence line does not close a code block outside a quote', () => {
+        const value = '```\n> ```\ntext';
+        expect(isInsideFencedCodeBlock(value, value.length)).toBe(true);
+    });
+
+    test('a code block inside a quote ends with the quote', () => {
+        const value = '> ```\n> x\nplain';
+        expect(isInsideFencedCodeBlock(value, value.length)).toBe(false);
+    });
+
+    test('a code block in a nested quote stays open on deeper lines', () => {
+        const value = '> ```\n> > not a quote';
+        expect(isInsideFencedCodeBlock(value, value.length)).toBe(true);
     });
 });

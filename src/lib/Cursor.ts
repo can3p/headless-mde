@@ -1,4 +1,4 @@
-import { isBtwOrEq, fireInput } from './utils';
+import { isBtwOrEq, fireInput, getLines } from './utils';
 
 export type SelectionDirectionType = 'backward' | 'forward' | 'none';
 
@@ -69,26 +69,7 @@ export class Cursor {
 
     /** @returns {Line[]} information about each line of text */
     public get lines(): Line[] {
-        let currentLength = 0;
-        return this.value.split('\n').reduce<Line[]>((lines, content, index, arr) => {
-            const lineNumber = index + 1;
-            const isLastLine = index === arr.length - 1;
-            const lineLength = content.length + Number(!isLastLine);
-
-            const startsAt = currentLength;
-            const endsAt = startsAt + lineLength - Number(!isLastLine);
-
-            currentLength += lineLength;
-
-            lines.push({
-                text: content,
-                lineNumber,
-                startsAt,
-                endsAt,
-            });
-
-            return lines;
-        }, []);
+        return getLines(this.value);
     }
 
     /** @returns {Selection} information about current selection */

@@ -1,5 +1,5 @@
 import { CommandHandler } from './types';
-import { clamp, escapeRegExp, quoteContinuation, quoteOuter, quotePrefix, splitQuotePrefix } from './utils';
+import { clamp, escapeRegExp, mapQuotedContent, quoteContinuation, quoteOuter, quotePrefix, splitQuotePrefix } from './utils';
 import { Cursor } from './Cursor';
 
 export const boldCommandHandler: CommandHandler = ({ cursor, options: { preferredBoldSyntax, boldPlaceholder } }) => {
@@ -37,13 +37,9 @@ export const orderedListCommandHandler: CommandHandler = ({ cursor }) => {
 
     // list markers go after the blockquote markers
     cursor.replaceCurrentLines(
-        (line, index) => {
-            const { quote, rest } = splitQuotePrefix(line.text);
-            return quote + (needUndo ? rest.replace(re, '') : `${index + 1}. ${rest}`);
-        },
-        {
-            selectReplaced: Boolean(cursor.selection),
-        },
+        (line, index) =>
+            mapQuotedContent(line.text, (content) => (needUndo ? content.replace(re, '') : `${index + 1}. ${content}`)),
+        { selectReplaced: Boolean(cursor.selection) },
     );
 };
 
@@ -55,13 +51,8 @@ export const unorderedListCommandHandler: CommandHandler = ({ cursor, options })
 
     // list markers go after the blockquote markers
     cursor.replaceCurrentLines(
-        (line) => {
-            const { quote, rest } = splitQuotePrefix(line.text);
-            return quote + (needUndo ? rest.replace(re, '') : `${syntax} ${rest}`);
-        },
-        {
-            selectReplaced: Boolean(cursor.selection),
-        },
+        (line) => mapQuotedContent(line.text, (content) => (needUndo ? content.replace(re, '') : `${syntax} ${content}`)),
+        { selectReplaced: Boolean(cursor.selection) },
     );
 };
 
@@ -75,21 +66,17 @@ export const codeBlockCommandHandler: CommandHandler = ({ cursor, options: { cod
     }
 
     // Inside a blockquote the fences must carry the quote markers too, so the block wraps whole lines
-    const fence = quoteContinuation(quote) + '```';
-    const isEmpty = lines.length === 1 && splitQuotePrefix(lines[0].text).rest.trim() === '';
-
     const M = Cursor.MARKER;
-
-    cursor.replaceCurrentLines((line, index, all) => {
-        const isFirst = index === 0;
-        const isLast = index === all.length - 1;
-        const { quote: lineQuote, rest } = splitQuotePrefix(line.text);
-        const body = isEmpty
+    const first = lines[0];
+    const last = lines[lines.length - 1];
+    const content = cursor.value.slice(first.startsAt + quote.length, last.endsAt);
+    const body =
+        content.trim() === ''
             ? `${quoteContinuation(quote)}${M}${codeBlockPlaceholder}${M}`
-            : lineQuote + (isFirst ? M : '') + rest + (isLast ? M : '');
+            : `${quote}${M}${content}${M}`;
+    const fence = quoteContinuation(quote) + '```';
 
-        return (isFirst ? `${fence}\n` : '') + body + (isLast ? `\n${fence}` : '');
-    });
+    cursor.replaceRange(first.startsAt, last.endsAt, `${fence}\n${body}\n${fence}`);
 };
 
 export const codeInlineCommandHandler: CommandHandler = ({ cursor, options: { codeInlinePlaceholder } }) => {
@@ -105,60 +92,62 @@ export const codeCommandHandler: CommandHandler = (ctx) => {
     }
 };
 
+/** A selection of whole lines ends at the start of the next line: that line is not part of it */
+const excludeLineAfterSelection = (cursor: Cursor) => {
+    const selection = cursor.selection;
+    const lastLine = selection?.lines[selection.lines.length - 1];
+    if (selection && lastLine && selection.lines.length > 1 && selection.selectionEnd === lastLine.startsAt) {
+        cursor.select({ start: selection.selectionStart, end: selection.selectionEnd - 1 });
+    }
+};
+
+/** Quote markers and content of a line after adding a quote level, a blank line gets a bare `>` */
+const quoteLine = (text: string) => ({ prefix: text.trim() === '' ? '>' : '> ', content: text.trim() === '' ? '' : text });
+
+/** Quote markers and content of a line after removing one quote level */
+const unquoteLine = (text: string) => {
+    const { quote, rest } = splitQuotePrefix(text);
+    return { prefix: quotePrefix(quoteOuter(quote), rest !== ''), content: rest };
+};
+
 /**
  * Toggles a blockquote on whole lines: quotes every selected line, or removes one level
  * when every selected line with text is already quoted
  */
 export const blockQuotesCommandHandler: CommandHandler = ({ cursor, options }) => {
-    let selection = cursor.selection;
+    excludeLineAfterSelection(cursor);
 
-    // a selection of whole lines ends at the start of the next line, that line is not part of it
-    const lastLine = selection?.lines[selection.lines.length - 1];
-    if (selection && lastLine && selection.lines.length > 1 && selection.selectionEnd === lastLine.startsAt) {
-        cursor.select({ start: selection.selectionStart, end: selection.selectionEnd - 1 });
-        selection = cursor.selection;
-    }
+    const selection = cursor.selection;
     const lines = selection?.lines ?? [cursor.position.line];
     const withText = lines.filter((line) => line.text.trim() !== '');
 
-    if (!selection && withText.length === 0) {
-        const lineNumber = cursor.position.line.lineNumber;
-        cursor.replaceLine(lineNumber, `> ${Cursor.MARKER}${options.blockQuotesPlaceholder}${Cursor.MARKER}`);
+    if (withText.length === 0 && !selection) {
+        const placeholder = `> ${Cursor.MARKER}${options.blockQuotesPlaceholder}${Cursor.MARKER}`;
+        cursor.replaceLine(cursor.position.line.lineNumber, placeholder);
         return;
     }
 
     const unquote = withText.length > 0 && withText.every((line) => splitQuotePrefix(line.text).depth > 0);
-
-    const toggle = (text: string) => {
-        if (unquote) {
-            const { quote, rest } = splitQuotePrefix(text);
-            return { prefix: quotePrefix(quoteOuter(quote), rest !== ''), quote, rest };
-        }
-        // a blank line becomes a bare `>`, so the quote stays one block with its paragraph breaks
-        return { prefix: text.trim() === '' ? '>' : '> ', quote: '', rest: text.trim() === '' ? '' : text };
-    };
+    const toggle = unquote ? unquoteLine : quoteLine;
 
     if (selection) {
         cursor.replaceCurrentLines(
             (line) => {
-                const { prefix, rest } = toggle(line.text);
-                return prefix + rest;
+                const { prefix, content } = toggle(line.text);
+                return prefix + content;
             },
             { selectReplaced: true },
         );
         return;
     }
 
-    // no selection: toggle the current line and keep the caret on the same character
+    // no selection: toggle the current line and keep the caret on the same character of the content
     const line = cursor.position.line;
-    const column = cursor.position.cursorAt - line.startsAt;
-    const { prefix, quote, rest } = toggle(line.text);
-    const restColumn = Math.max(0, column - quote.length);
-    cursor.replaceRange(
-        line.startsAt,
-        line.endsAt,
-        prefix + rest.slice(0, restColumn) + Cursor.MARKER + rest.slice(restColumn),
-    );
+    const { prefix, content } = toggle(line.text);
+    const oldPrefixLength = line.text.length - content.length;
+    const column = Math.max(0, cursor.position.cursorAt - line.startsAt - oldPrefixLength);
+
+    cursor.replaceRange(line.startsAt, line.endsAt, prefix + content.slice(0, column) + Cursor.MARKER + content.slice(column));
 };
 
 export const strikeThroughCommandHandler: CommandHandler = ({ cursor, options: { strikeThroughPlaceholder } }) => {
