@@ -4,17 +4,7 @@ import { act, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { quoteBackspace, quoteEnter, quotePaste } from '../lib/blockquote';
 import { isInsideFencedCodeBlock, splitQuotePrefix } from '../lib/utils';
-
-/**
- *  `<` - selectionStart, `>` - selectionEnd, `&gt` - a literal `>`
- */
-const parseContent = (value: string) => {
-    const chars = value.replace(/&lt|&gt/g, ' ').split('');
-    const text = value.replace(/(<|>)/g, '').replace(/&lt/g, '<').replace(/&gt/g, '>');
-    const selectionStart = chars.findIndex((x) => x === '<');
-    const selectionEnd = chars.findIndex((x) => x === '>') - 1;
-    return { text, selectionEnd, selectionStart };
-};
+import { parseContent } from './notation';
 
 type TestCase = {
     description: string;
@@ -38,9 +28,6 @@ const run = (cases: TestCase[]) => {
 
                 useEffect(() => {
                     ref.current?.setSelectionRange(inputData.selectionStart, inputData.selectionEnd);
-                    if (c.commandName) {
-                        ref.current?.trigger?.(c.commandName);
-                    }
                     // eslint-disable-next-line react-hooks/exhaustive-deps
                 }, []);
 
@@ -57,6 +44,11 @@ const run = (cases: TestCase[]) => {
             const view = render(<Example />);
             const textarea = view.container.querySelector('textarea')!;
             textarea.focus();
+
+            // like a toolbar click: outside React's render and effects
+            if (c.commandName) {
+                await act(async () => (textarea as TextareaMarkdownRef).trigger(c.commandName!));
+            }
 
             await act(async () => {
                 await c.act?.();

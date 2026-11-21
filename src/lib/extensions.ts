@@ -16,6 +16,20 @@ import { Cursor } from './Cursor';
 import { KeyboardShortcuts } from './keyboard';
 
 /**
+ * Whether a keydown is one the editor may take over: nothing handled it yet, it doesn't belong to an IME
+ * composition (`keyCode` 229 is how Safari reports the composition-ending Enter) and no modifier is held.
+ * `shift` included: `shift+enter` and `shift+backspace` keep the plain textarea behavior.
+ */
+const isPlainKeyPress = (event: KeyboardEvent) =>
+    !event.defaultPrevented &&
+    !event.isComposing &&
+    event.keyCode !== 229 &&
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey;
+
+/**
  * Handle the paste event, if the pasted text is a URL and something is selected, it will be converted to link/image markup.
  */
 export const linkPasteExtension: Extension = (textarea) => {
@@ -150,16 +164,13 @@ export const prefixWrappingExtension: Extension = (textarea, options) => {
 
     const keydownListener = (event: KeyboardEvent) => {
         if (
-            event.defaultPrevented ||
+            !isPlainKeyPress(event) ||
             event.code !== 'Enter' ||
-            // shift+enter is the plain line break
-            event.shiftKey ||
             isInsideFencedCodeBlock(cursor.value, cursor.position.cursorAt)
         ) {
             return;
         }
 
-        // this code bellow should be executed before default behavior.
         // entering line – is line on which the Enter was pressed
         const enteringLine = cursor.lineAt(cursor.position.line.lineNumber)!;
 
@@ -180,29 +191,19 @@ export const prefixWrappingExtension: Extension = (textarea, options) => {
         }
 
         const { prefix, shouldBreak, shouldSaveIndent } = matched;
+
+        // the whole Enter is one edit, so it is one undo step, and nothing waits for a newline
+        // that may never come (a replayed or prevented Enter, an IME commit)
+        event.preventDefault();
+
         if (shouldBreak) {
-            // for a list line without content remove prefix of this line before default behavior
-            cursor.replaceLine(enteringLine.lineNumber, '');
+            // a list line without content leaves the list
+            cursor.replaceLine(enteringLine.lineNumber, '\n');
             return;
         }
 
-        // PATCH: Let Enter key create newline naturally (like GitHub), then insert only the prefix
         const indent = shouldSaveIndent ? getIndent(enteringLine.text) : '';
-
-        // PATCH: In test environment, use old approach (preventDefault + manual insertion)
-        // In browser, let Enter work naturally and insert prefix via input event (fixes scroll bug)
-        if (process.env.NODE_ENV === 'test') {
-            event?.preventDefault();
-            cursor.insert(`\n${indent}${prefix}${Cursor.MARKER}`);
-        } else {
-            // Let Enter key create newline naturally (like GitHub), then insert only the prefix
-            // Use input event to ensure newline exists before inserting prefix (fixes Firefox race condition)
-            const prefixToInsert = `${indent}${prefix}${Cursor.MARKER}`;
-
-            textarea.addEventListener('input', function() {
-                cursor.insert(prefixToInsert);
-            }, { once: true });
-        }
+        cursor.insert(`\n${indent}${prefix}${Cursor.MARKER}`);
     };
 
     textarea.addEventListener('keydown', keydownListener);
@@ -253,7 +254,7 @@ export const orderedListAutoCorrectExtension: Extension = (textarea) => {
     const INVALID_PATTERN = /^\s*(\d+(\.\d+)?\.?)\)\s*/;
 
     const handler = (event: KeyboardEvent) => {
-        if (event.defaultPrevented || event.code !== 'Enter' || event.shiftKey) {
+        if (!isPlainKeyPress(event) || event.code !== 'Enter') {
             return;
         }
 
@@ -296,14 +297,7 @@ export const blockquoteExtension: Extension = (textarea) => {
     };
 
     const keydownListener = (event: KeyboardEvent) => {
-        if (
-            event.defaultPrevented ||
-            event.isComposing ||
-            event.shiftKey ||
-            event.altKey ||
-            event.ctrlKey ||
-            event.metaKey
-        ) {
+        if (!isPlainKeyPress(event)) {
             return;
         }
 

@@ -17,7 +17,7 @@ Put it in a file in your scratchpad (not in the repo). It holds:
   `<` for `selectionStart`, `│` for a caret in prose
 - the files and functions you will add or change, and which existing ones you will reuse
 - what stays out of scope
-- the tests you will add (`src/tests/<area>.test.ts(x)`)
+- the tests you will add (`src/tests/<area>.test.ts(x)`, and `e2e/<area>.spec.ts` for browser behavior)
 
 ## 2. Run the critic as a subagent
 
@@ -28,8 +28,9 @@ filled in. It must start cold: don't paste your reasoning, only the plan.
 > textarea markdown editor (`src/lib`: `Cursor.ts` text and selection edits, `handlers.ts` commands,
 > `extensions.ts` keyboard and paste behaviors, `utils.ts` pure helpers, `bootstrap.ts` wiring).
 > Read the plan at `<plan path>` and the code it touches. Do not modify the repo. You may write probe
-> tests to check the current behavior: copy them into `src/tests` named `zz-critic-*`, run `npx jest
-> <file>`, and delete them before you finish so `git status` is clean.
+> tests to check the current behavior: copy them into `src/tests` named `zz-critic-*` and run `npx jest
+> <file>`, or into `e2e/zz-critic-*.spec.ts` and run `npx playwright test <file>`; delete them before you
+> finish so `git status` is clean.
 >
 > Answer, with file:line references and saying which claims you verified with a probe:
 > 1. **Modularity**: will the change keep pure logic separate from DOM and `Cursor`, reuse existing
@@ -38,7 +39,7 @@ filled in. It must start cold: don't paste your reasoning, only the plan.
 > 2. **Gaps**: which inputs or interactions does the plan miss? Consider nesting, empty lines, caret vs
 >    selection, caret inside markup, code blocks, CRLF, the other extensions that listen to the same key
 >    or event (and their registration order in `bootstrap.ts`), Shift and other modifiers, IME, undo,
->    the React component, and the `NODE_ENV === 'test'` paths that jsdom runs instead of the browser ones.
+>    the React component, and what jsdom can't show (`execCommand`, scroll, undo: see the `e2e/` suite).
 > 3. **Blockers**: what must change in the plan before coding starts, ranked?
 > 4. **Spaghetti**: will the change spread conditionals across files or grow functions with many branches?
 >    Where exactly, and is it acceptable?
