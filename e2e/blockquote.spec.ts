@@ -74,6 +74,20 @@ test.describe('blockquote: enter', () => {
                 undo: true,
             },
             {
+                name: "a '> ' custom prefix leaves lists in quotes alone",
+                input: '&gt - item<>',
+                act: enter,
+                expected: '&gt - item\n&gt - <>',
+                config: { options: { customPrefixWrapping: ['> '] } },
+            },
+            {
+                name: "a '> ' custom prefix leaves paragraph breaks alone",
+                input: '&gt text\n&gt <>',
+                act: enter,
+                expected: '&gt text\n&gt\n&gt <>',
+                config: { options: { customPrefixWrapping: ['> '] } },
+            },
+            {
                 name: 'continues a list in a quote without prefix wrapping',
                 input: '&gt - item<>',
                 act: enter,

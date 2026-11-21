@@ -1,5 +1,5 @@
 import { Cursor } from '../lib/Cursor';
-import { applyTextEdit, composeEdits, enterEdit, enterRules } from '../lib/enter';
+import { applyTextEdit, diffEdit, enterEdit, enterRules } from '../lib/enter';
 import { defaultTextareaMarkdownOptions, TextareaMarkdownOptions } from '../lib/types';
 import { formatContent, parseContent } from './notation';
 
@@ -37,6 +37,8 @@ describe('enterEdit: lists', () => {
         ['- [x] a<>', {}, '- [x] a\n- [ ] <>'],
         ['- [ ] <>', {}, '\n<>'],
         ['- a\n- <>', {}, '- a\n\n<>'],
+        ['- <>  ', {}, '\n<>'],
+        ['&gt 1. <> ', {}, '&gt <>'],
         ['- a<bc>', {}, '- a\n- <>'],
         ['- ab<>cd', {}, '- ab\n- <>cd'],
         // lists inside quotes, whichever extension is on
@@ -94,6 +96,25 @@ describe('enterEdit: custom prefixes', () => {
         expect(enter(input, options)).toBe(expected);
     });
 
+    test('a quote prefix leaves quotes to the blockquote extension', () => {
+        const quotePrefix = { customPrefixWrapping: ['> '], ...quotes };
+        expect(enter('&gt - a<>', quotePrefix)).toBe('&gt - a\n&gt - <>');
+        expect(enter('&gt text\n&gt <>', quotePrefix)).toBe('&gt text\n&gt\n&gt <>');
+        expect(enter('&gt a<>', quotePrefix)).toBe('&gt a\n&gt <>');
+    });
+
+    test('a function prefix gets a quoted line without its markers', () => {
+        const numbered = {
+            customPrefixWrapping: [{ prefixPattern: /Q\d+: /, prefix: (line: { text: string }) => `Q${parseInt(line.text.slice(1)) + 1}: ` }],
+        };
+        expect(enter('&gt Q1: a<>', numbered)).toBe('&gt Q1: a\n&gt Q2: <>');
+    });
+
+    test('a caret before a custom prefix is a plain line break', () => {
+        expect(enter('- [<>] a', checklist)).toBe('- [\n<>] a');
+        expect(enter('&gt - [<>] a', { ...checklist, ...quotes })).toBe('&gt - [\n&gt <>] a');
+    });
+
     test('custom prefixes are off with prefix wrapping', () => {
         expect(enter('- [] a<>', { ...checklist, ...noWrapping })).toBeNull();
     });
@@ -131,15 +152,8 @@ describe('enterEdit: ordered list auto-correct', () => {
     });
 });
 
-test('composeEdits gives the result of both edits', () => {
-    const value = 'abcdef';
-    const first = { from: 1, to: 2, text: 'XYZ' };
-    const second = { from: 5, to: 6, text: '!' };
-    expect(applyTextEdit(value, composeEdits(value, first, second))).toBe(
-        applyTextEdit(applyTextEdit(value, first), second),
-    );
-    const overlapping = { from: 0, to: 2, text: '' };
-    expect(applyTextEdit(value, composeEdits(value, first, overlapping))).toBe(
-        applyTextEdit(applyTextEdit(value, first), overlapping),
-    );
+test('diffEdit covers what changed', () => {
+    expect(diffEdit('abcdef', 'aXYZcdef')).toEqual({ from: 1, to: 2, text: 'XYZ' });
+    expect(diffEdit('1)a', '1. a\n2. ' + Cursor.MARKER)).toEqual({ from: 1, to: 3, text: '. a\n2. ' + Cursor.MARKER });
+    expect(diffEdit('aa', 'aaa')).toEqual({ from: 2, to: 2, text: 'a' });
 });

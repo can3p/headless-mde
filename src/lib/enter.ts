@@ -37,11 +37,18 @@ const leaveItem = (line: Line, quote: string): TextEdit => ({
 export const listRule =
     (scope: 'all' | 'quoted'): EnterRule =>
     ({ line, column, start, end, fence, prefix }) => {
-        if (fence || !prefix.list || (scope === 'quoted' && prefix.depth === 0) || column < prefixLength(prefix)) {
+        const { list, quote, indent, content, depth } = prefix;
+        if (fence || !list || (scope === 'quoted' && depth === 0)) {
             return null;
         }
-        if (prefix.content.trim() === '') {
-            return leaveItem(line, prefix.quote);
+        const empty = content.trim() === '';
+        // an empty item ends after its marker, the spacing may be trailing whitespace
+        const contentColumn = empty ? quote.length + indent.length + list.marker.length : prefixLength(prefix);
+        if (column < contentColumn) {
+            return null;
+        }
+        if (empty) {
+            return leaveItem(line, quote);
         }
         return { from: start, to: end, text: `\n${formatLinePrefix(continuationPrefix(prefix))}${M}` };
     };
@@ -50,10 +57,12 @@ const toConfig = (value: PrefixWrappingConfig | string): PrefixWrappingConfig =>
     typeof value === 'string' ? { prefix: value } : value;
 
 /**
- * Custom prefixes from `customPrefixWrapping`. A prefix is matched at the start of the line, after any
- * whitespace; on a quoted line also after the quote markers, then the quote carries over too.
+ * Custom prefixes from `customPrefixWrapping`, matched at the start of the line after any whitespace.
+ * On a quoted line they are matched after the quote markers too, and the quote carries over; a function
+ * `prefix` then gets the line without its markers. With `quotes` (the blockquote extension) quoted lines
+ * are only matched after the markers, so a `'> '` prefix doesn't take over from the quote rule.
  */
-export const customPrefixRule = (customs: (PrefixWrappingConfig | string)[]): EnterRule => {
+export const customPrefixRule = (customs: (PrefixWrappingConfig | string)[], { quotes }: { quotes: boolean }): EnterRule => {
     const configs = customs.map(toConfig);
 
     return ({ line, column, start, end, fence, prefix }) => {
@@ -61,25 +70,31 @@ export const customPrefixRule = (customs: (PrefixWrappingConfig | string)[]): En
             return null;
         }
 
-        const quotes = prefix.quote ? ['', prefix.quote] : [''];
-        for (const config of configs) {
-            const text = config.prefix instanceof Function ? config.prefix(line) : config.prefix;
-            const pattern = config.prefixPattern ?? new RegExp(escapeRegExp(text));
-            const startRe = new RegExp(`^\\s*(?:${pattern.source})`);
+        const candidates = prefix.quote === '' || !quotes ? [''] : [];
+        if (prefix.quote !== '') {
+            candidates.push(prefix.quote);
+        }
 
-            for (const quote of quotes) {
-                const body = line.text.slice(quote.length);
-                const match = startRe.exec(body);
+        for (const quote of candidates) {
+            const body: Line = { ...line, text: line.text.slice(quote.length), startsAt: line.startsAt + quote.length };
+            for (const config of configs) {
+                const text = config.prefix instanceof Function ? config.prefix(body) : config.prefix;
+                const pattern = config.prefixPattern ?? new RegExp(escapeRegExp(text));
+                const match = new RegExp(`^\\s*(?:${pattern.source})`).exec(body.text);
                 if (!match) {
                     continue;
                 }
-                if (column < quote.length + match[0].length) {
+                if (column < quote.length) {
                     return null;
                 }
-                if (config.shouldBreakIfEmpty !== false && body.replace(pattern, '').trim() === '') {
+                if (column < quote.length + match[0].length) {
+                    // the caret is before the content: a plain line break, no other rule takes the line
+                    return { from: start, to: end, text: `\n${quotes ? quoteContinuation(quote) : ''}${M}` };
+                }
+                if (config.shouldBreakIfEmpty !== false && body.text.replace(pattern, '').trim() === '') {
                     return leaveItem(line, quote);
                 }
-                const indent = config.shouldSaveIndent === false ? '' : /^\s*/.exec(body)![0];
+                const indent = config.shouldSaveIndent === false ? '' : /^\s*/.exec(body.text)![0];
                 return { from: start, to: end, text: `\n${quoteContinuation(quote)}${indent}${text}${M}` };
             }
         }
@@ -94,7 +109,10 @@ export const quoteRule: EnterRule = ({ value, start, end, fence }) => quoteEnter
 export const enterRules = (options: TextareaMarkdownOptions): EnterRule[] => {
     const rules: EnterRule[] = [];
     if (options.enablePrefixWrappingExtension) {
-        rules.push(customPrefixRule(options.customPrefixWrapping), listRule('all'));
+        rules.push(
+            customPrefixRule(options.customPrefixWrapping, { quotes: options.enableBlockquoteExtension }),
+            listRule('all'),
+        );
     } else if (options.enableBlockquoteExtension) {
         rules.push(listRule('quoted'));
     }
@@ -106,14 +124,21 @@ export const enterRules = (options: TextareaMarkdownOptions): EnterRule[] => {
 
 export const applyTextEdit = (value: string, { from, to, text }: TextEdit) => value.slice(0, from) + text + value.slice(to);
 
-/** One edit with the effect of `first`, then `second` applied to the result */
-export const composeEdits = (value: string, first: TextEdit, second: TextEdit): TextEdit => {
-    const shift = (edit: TextEdit) => edit.text.length - (edit.to - edit.from);
-    const from = Math.min(first.from, second.from);
-    // the end of the changed range, in the text after `first`
-    const to = Math.max(first.from + first.text.length, second.to);
-    const result = applyTextEdit(applyTextEdit(value, first), second);
-    return { from, to: to - shift(first), text: result.slice(from, to + shift(second)) };
+/** The edit that turns `before` into `after`: everything between their common start and common end */
+export const diffEdit = (before: string, after: string): TextEdit => {
+    let from = 0;
+    while (from < before.length && from < after.length && before[from] === after[from]) {
+        from++;
+    }
+    let tail = 0;
+    while (
+        tail < before.length - from &&
+        tail < after.length - from &&
+        before[before.length - 1 - tail] === after[after.length - 1 - tail]
+    ) {
+        tail++;
+    }
+    return { from, to: before.length - tail, text: after.slice(from, after.length - tail) };
 };
 
 const runRules = (value: string, start: number, end: number, fence: OpenFence | null, rules: EnterRule[]) => {
@@ -177,5 +202,6 @@ export const enterEdit = (
     const [newStart, newEnd] = [map(start), map(end)];
 
     const next = runRules(corrected, newStart, newEnd, fence, rules) ?? { from: newStart, to: newEnd, text: '\n' + M };
-    return composeEdits(value, correction, next);
+    // one edit for both, so the correction and the new line are one undo step
+    return diffEdit(value, applyTextEdit(corrected, next));
 };
