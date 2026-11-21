@@ -20,7 +20,7 @@ describe('utils', () => {
         fireInput(textarea, 'replaced');
         expect(textarea.value).toBe('replaced');
 
-        expect(handleInput).toBeCalledTimes(1);
+        expect(handleInput).toHaveBeenCalledTimes(1);
     });
 
     test('should change input value and emit event (without textarea.setRangeText support)', () => {
@@ -36,6 +36,6 @@ describe('utils', () => {
         fireInput(textarea, 'replaced');
         expect(textarea.value).toBe('replaced');
 
-        expect(handleInput).toBeCalledTimes(1);
+        expect(handleInput).toHaveBeenCalledTimes(1);
     });
 });
