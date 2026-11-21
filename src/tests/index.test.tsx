@@ -805,7 +805,7 @@ describe('TextareaMarkdown component usage', () => {
             mdRef.current?.trigger('test', 'example_arg1', ['example_arg2']);
         });
 
-        expect(handler).toBeCalledWith(
+        expect(handler).toHaveBeenCalledWith(
             expect.objectContaining({
                 textarea: expect.any(HTMLTextAreaElement),
                 cursor: expect.any(Cursor),

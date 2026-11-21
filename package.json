@@ -61,7 +61,6 @@
     "esbuild": "0.28.2",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.0.1",
-    "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
@@ -69,7 +68,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "ts-jest": "^29.2.5",
-    "typescript": "^7.0.2",
+    "typescript": "~6.0.3",
     "typescript-eslint": "^8.21.0"
   },
   "scripts": {

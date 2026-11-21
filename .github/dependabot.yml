@@ -6,6 +6,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # TypeScript 7 (the native port) is not supported by typescript-eslint (<6.1) or ts-jest (<7) yet
+      - dependency-name: typescript
+        versions: ['>=7']
     groups:
       npm-dependencies:
         patterns:
