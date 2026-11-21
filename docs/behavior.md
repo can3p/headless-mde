@@ -24,8 +24,8 @@ Throughout the page, `│` marks the caret.
 
 Commands are what you wire to toolbar buttons with `trigger('bold')`. A few also have shortcuts.
 
-**Bold, italic, strike-through, inline code** (`Ctrl/Cmd+B`, `Ctrl/Cmd+I`, `Ctrl/Cmd+Shift+X`) wrap the
-selection in markup. With nothing selected, they insert a placeholder such as `**bold**` and select the
+**Bold, italic, strike-through and inline code** wrap the selection in markup. Bold, italic and
+strike-through have shortcuts: `Ctrl/Cmd+B`, `Ctrl/Cmd+I` and `Ctrl/Cmd+Shift+X` (or `Alt+Shift+F5`). With nothing selected, they insert a placeholder such as `**bold**` and select the
 word, so you can type over it. Run the same command on text that is already wrapped and the markup comes
 off again.
 
@@ -34,8 +34,9 @@ same level again turns the heading back into a plain line.
 
 **Lists (ordered and unordered)** put a marker in front of every selected line, numbering them `1.`, `2.`,
 `3.` for an ordered list. If every line already is such a list item, the markers are removed instead, so
-the button works as a toggle. An indented item counts as a nested list, so the unordered list command adds
-a marker rather than removing one.
+the button works as a toggle. The unordered list command only recognizes its own marker (`*` unless
+`preferredUnorderedListSyntax` says otherwise), so on a `- item` line it adds a `*` rather than removing the
+`-`. An indented item counts as a nested list, so the command adds a marker rather than removing one.
 
 **Block quote** adds a `>` level to the selected lines. If every line that has text is already quoted, it
 removes one level instead. On an empty line it inserts `> quote` with the placeholder selected. The caret
@@ -71,8 +72,9 @@ Press Enter at the end of a list item and the next line starts with the next mar
 | `    * deep│`   | keeps the indentation       |
 | `> * quoted│`   | `> * quoted`, `> * │`       |
 
-A checked task continues as an unchecked one. Pressing Enter on an empty item ends the list: the marker
-disappears and you get a plain line (inside a quote, you stay in the quote). With the caret before the
+A checked task continues as an unchecked one. Pressing Enter on an empty item ends the list: the marker is
+removed, leaving an empty line, and the caret moves to the line below (inside a quote, you stay in the
+quote). With the caret before the
 item's text, Enter is a plain line break.
 
 The `customPrefixWrapping` option adds your own prefixes to continue, such as `// ` or `| `.
@@ -80,7 +82,8 @@ The `customPrefixWrapping` option adds your own prefixes to continue, such as `/
 ### Ordered list auto-correct — `enableOrderedListAutoCorrectExtension` (off by default)
 
 Some people type `1)` for numbered lists. With this on, pressing Enter on such a line rewrites the marker
-to `1.` and continues the list. The correction and the new line are one undo step.
+to `1.`. If list continuation is on too, the next line gets `2.`; otherwise Enter is a plain line break.
+Either way, the correction and the new line are one undo step.
 
 ### Quotes take care of themselves — `enableBlockquoteExtension` (off by default)
 
@@ -97,30 +100,33 @@ way you'd expect in an email client:
 | `> a`, `> │b`                          | Backspace | `> a │b`: joins the two lines                     |
 | `>`, `> │b` after a paragraph break    | Backspace | removes the break                                 |
 | `> │b` on the first line of a quote    | Backspace | `│b`: removes one quote level                     |
-| inside a quote                         | Paste     | every pasted line gets the markers, blank lines become `>` |
+| inside a quote                         | Paste of several lines | every line after the first gets the markers, blank lines become `>` |
 
 Inside a code block that sits in a quote, only the markers of that quote are kept; a code block outside any
 quote is left completely alone.
 
 ### Tab indents — `enableIndentExtension` (on by default)
 
-Tab inserts four spaces instead of moving focus out of the textarea. With several lines selected, each of
-them is indented and the selection is kept. Shift+Tab removes up to four spaces from the start of each
-line. Inside a quote, the indentation goes after the `>` markers.
+Tab inserts four spaces at the caret instead of moving focus out of the textarea. With a selection, even
+one inside a single line, every line it touches is indented as a whole and the selection is kept; inside a
+quote, that indentation goes after the `>` markers. Shift+Tab removes up to four spaces from the start of
+each line (after the markers in a quote).
 
 Keep in mind that this means keyboard users can't Tab out of the editor. If that matters for your page,
 turn the extension off or give people another way out.
 
 ### Pasting a link onto a selection — `enableLinkPasteExtension` (on by default)
 
-Select some text and paste a URL: the text becomes `[text](url)`. If the URL ends in `.png`, `.jpg`,
-`.jpeg` or `.gif`, you get an image, `![text](url)`. Nothing special happens when nothing is selected, when
-the selection is itself a URL, or when it is already inside a link.
+Select some text and paste a URL: the text becomes `[text](url)` followed by a space, with the caret after
+it. If the URL ends in `.png`, `.jpg`, `.jpeg` or `.gif`, you get an image, `![text](url)`. Anything the
+browser accepts as an absolute URL counts, `mailto:` links included. Nothing special happens when nothing is
+selected, when the selection is itself a URL, or when it is already inside a link.
 
 ### Ctrl/Cmd+Backspace on an empty line — `enableProperLineRemoveBehaviorExtension` (on by default)
 
 On an empty line, Ctrl+Backspace (Cmd+Backspace on a Mac) removes just that line instead of whatever the
-browser would delete. On a line with text, the browser's usual behavior applies.
+browser would delete. On a line with text, the browser's usual behavior applies. (On an empty first line
+nothing is removed yet; that is a known bug.)
 
 ### Em dashes — `enableEmDashExtension` (on by default)
 

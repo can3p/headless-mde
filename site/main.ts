@@ -2,6 +2,7 @@
  * The playground on the project site: a textarea driven by the library, a toolbar with every built-in command,
  * a toggle for every extension and a live preview. Bundled by `site/build.ts` from the library sources.
  */
+import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { bootstrapTextareaMarkdown } from '../src/lib/headless';
 import { defaultTextareaMarkdownOptions } from '../src/lib/types';
@@ -15,7 +16,7 @@ const SAMPLE = `# Shopping list
 1. Find the store
 2. Buy things
 
-> Quotes keep their markers when "Smart quotes" is on.
+> Quotes keep their markers when "Quote markers" is on.
 > Press Enter at the end of this line.
 
 Type two dashes and a space here:
@@ -61,7 +62,8 @@ const renderSetup = () => {
 };
 
 const renderPreview = () => {
-    preview.innerHTML = marked.parse(textarea.value, { async: false });
+    // the text is whatever the visitor typed or pasted: never let it run script
+    preview.innerHTML = DOMPurify.sanitize(marked.parse(textarea.value, { async: false }));
 };
 
 for (const [name, info] of Object.entries(COMMANDS) as [BuiltInCommand, (typeof COMMANDS)[BuiltInCommand]][]) {

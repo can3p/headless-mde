@@ -22,12 +22,12 @@ export const EXTENSIONS: Record<ExtensionOption, ExtensionInfo> = {
     },
     enableOrderedListAutoCorrectExtension: {
         label: 'Fix 1) markers',
-        summary: 'Enter on a “1)” item rewrites the marker to “1.” and continues the list.',
+        summary: 'Enter on a “1)” item rewrites the marker to “1.” (the list continues if “Continue lists” is on).',
         tryIt: 'Type “1) one” on a new line and press Enter.',
     },
     enableBlockquoteExtension: {
-        label: 'Smart quotes',
-        summary: 'Enter, Backspace and paste keep the > markers in place inside a quote.',
+        label: 'Quote markers',
+        summary: 'Enter, Backspace and multi-line paste keep the > markers in place inside a quote.',
         tryIt: 'Press Enter at the end of a quoted line, then Enter twice on the empty one.',
     },
     enableIndentExtension: {

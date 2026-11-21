@@ -64,4 +64,4 @@ jobs:
     uses: ./.github/workflows/site.yaml
     with:
       # the publish job moved the tag to the version bump commit
-      ref: ${{ github.ref_name }}
+      ref: refs/tags/${{ github.ref_name }}

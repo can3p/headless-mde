@@ -61,3 +61,10 @@ test('toolbar buttons run commands on the selection and the preview follows', as
     await expect(editor(page)).toBeFocused();
     await expect(page.locator('#preview strong')).toHaveText('this');
 });
+
+test('the preview does not run script from the text', async ({ page }) => {
+    await setValue(page, '&ltimg src=x onerror="window.pwned = true"&gt\n\n&ltscript&gtwindow.pwned = true&lt/script&gt<>');
+    await expect(page.locator('#preview img')).toHaveCount(1);
+    expect(await page.evaluate(() => (window as unknown as { pwned?: boolean }).pwned)).toBeUndefined();
+    await expect(page.locator('#preview img')).not.toHaveAttribute('onerror');
+});
