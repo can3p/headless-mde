@@ -126,7 +126,8 @@ selected, when the selection is itself a URL, or when it is already inside a lin
 
 On an empty line, Ctrl+Backspace (Cmd+Backspace on a Mac) removes just that line instead of whatever the
 browser would delete. On a line with text, the browser's usual behavior applies. (On an empty first line
-nothing is removed yet; that is a known bug.)
+nothing is removed yet; that is a known bug,
+[#21](https://github.com/can3p/headless-mde/issues/21).)
 
 ### Em dashes — `enableEmDashExtension` (on by default)
 

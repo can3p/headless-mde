@@ -57,3 +57,10 @@ Both skills check the same five points:
 Agents without skill support read the `SKILL.md` files directly.
 
 A one-line fix (a typo, a dependency bump, a docs change) needs neither step.
+
+## Bugs you won't fix in this session
+
+When you find a bug that isn't related to your change and you aren't going to fix it in the session, always
+open a GitHub issue for it before you finish: what happens, how to reproduce it (input, caret, key, browser),
+what should happen, and where in the code the cause is if you found it. Link the issue from the PR
+description, and from the docs if they mention the bug.
