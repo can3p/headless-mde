@@ -146,6 +146,13 @@ test.describe('other keys', () => {
             undo: true,
         },
         {
+            name: 'ctrl+backspace deletes a selection that starts on an empty line',
+            input: 'a\n<\nbc>',
+            act: press('ControlOrMeta+Backspace'),
+            expected: 'a\n<>',
+            undo: true,
+        },
+        {
             name: 'ctrl+backspace on the only, empty line',
             input: '<>',
             act: press('ControlOrMeta+Backspace'),

@@ -171,7 +171,8 @@ export const properLineRemoveBehaviorExtension: Extension = (textarea) => {
     const keyboard = new KeyboardShortcuts(textarea);
 
     keyboard.bind(metaCombination('backspace'), (event) => {
-        if (cursor.position.line.text === '') {
+        // with a selection, the textarea deletes it as usual
+        if (!cursor.selection && cursor.position.line.text === '') {
             event.preventDefault();
             cursor.replaceLine(cursor.position.line.lineNumber, null);
         }

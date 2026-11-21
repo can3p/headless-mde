@@ -147,7 +147,8 @@ selected, when the selection is itself a URL, or when it is already inside a lin
 
 On an empty line, Ctrl+Backspace (Cmd+Backspace on a Mac) removes just that line instead of whatever the
 browser would delete. On a line with text, the browser's usual behavior applies. An empty first line goes
-with the line break after it, so the caret lands at the start of the next line.
+with the line break after it, so the caret lands at the start of the next line. With a selection, the browser
+deletes the selection as usual, even when it starts on an empty line.
 
 ### Em dashes — `enableEmDashExtension` (on by default)
 

@@ -137,3 +137,38 @@ describe('backspaceExtension', () => {
         expect(value()).toBe('- a\n- <>b');
     });
 });
+
+describe('properLineRemoveBehaviorExtension', () => {
+    const setup = (notation: string) => {
+        const textarea = document.createElement('textarea');
+        document.body.appendChild(textarea);
+        const { text, selectionStart, selectionEnd } = parseContent(notation);
+        textarea.value = text;
+        textarea.setSelectionRange(selectionStart, selectionEnd);
+        const { dispose } = bootstrapTextareaMarkdown(textarea, {});
+        const press = (init: KeyboardEventInit) => {
+            const event = new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true, ...init });
+            textarea.dispatchEvent(event);
+            return event;
+        };
+        const value = () => formatContent(textarea.value, textarea.selectionStart, textarea.selectionEnd);
+        return { press, value, dispose };
+    };
+
+    test.each([{ ctrlKey: true }, { metaKey: true }])('%j removes an empty line', (init) => {
+        const { press, value, dispose } = setup('a\n<>\nbc');
+        expect(press(init).defaultPrevented).toBe(true);
+        expect(value()).toBe('a<>\nbc');
+        dispose();
+    });
+
+    test.each([{ ctrlKey: true }, { metaKey: true }])(
+        '%j leaves a selection that starts on an empty line to the textarea',
+        (init) => {
+            const { press, value, dispose } = setup('a\n<\nbc>');
+            expect(press(init).defaultPrevented).toBe(false);
+            expect(value()).toBe('a\n<\nbc>');
+            dispose();
+        },
+    );
+});
