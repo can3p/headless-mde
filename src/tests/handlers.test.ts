@@ -182,7 +182,7 @@ describe('blockQuotesCommandHandler', () => {
     it('should remove existing quote prefix', () => {
         const ctx = createContext('> quoted', 0, 0);
         blockQuotesCommandHandler(ctx);
-        expect(ctx.textarea.value).toBe('> quoted');
+        expect(ctx.textarea.value).toBe('quoted');
     });
 });
 

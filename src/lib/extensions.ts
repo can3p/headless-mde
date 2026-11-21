@@ -7,7 +7,10 @@ import {
     isInsideFencedCodeBlock,
     isURL,
     metaCombination,
+    mapQuotedContent,
+    splitQuotePrefix,
 } from './utils';
+import { quoteBackspace, quoteEnter, quotePaste, TextEdit } from './blockquote';
 
 import { Cursor } from './Cursor';
 import { KeyboardShortcuts } from './keyboard';
@@ -88,16 +91,20 @@ export const indentExtension: Extension = (textarea) => {
             cursor.insert(`${indent}${Cursor.MARKER}`);
         } else {
             // If user is select line or lines - add Indent for each of this selected line, and keep selection
-            cursor.replaceCurrentLines((line) => indent + line.text, { selectReplaced: true });
+            // inside a blockquote the indentation goes after the quote markers
+            cursor.replaceCurrentLines((line) => mapQuotedContent(line.text, (content) => indent + content), {
+                selectReplaced: true,
+            });
         }
     });
 
     keyboard.bind('shift+tab', (event) => {
         event?.preventDefault();
-        cursor.replaceCurrentLines((line) => line.text.replace(/\s{0,4}/, ''), {
+        cursor.replaceCurrentLines(
+            (line) => mapQuotedContent(line.text, (content) => content.replace(/^\s{0,4}/, '')),
             // select lines if something was selected
-            selectReplaced: Boolean(cursor.selection),
-        });
+            { selectReplaced: Boolean(cursor.selection) },
+        );
     });
 
     return () => keyboard.reset();
@@ -142,7 +149,13 @@ export const prefixWrappingExtension: Extension = (textarea, options) => {
     const configs = [...customConfigs, ...buildInConfigs];
 
     const keydownListener = (event: KeyboardEvent) => {
-        if (event.code !== 'Enter' || isInsideFencedCodeBlock(cursor.value, cursor.position.cursorAt)) {
+        if (
+            event.defaultPrevented ||
+            event.code !== 'Enter' ||
+            // shift+enter is the plain line break
+            event.shiftKey ||
+            isInsideFencedCodeBlock(cursor.value, cursor.position.cursorAt)
+        ) {
             return;
         }
 
@@ -240,11 +253,11 @@ export const orderedListAutoCorrectExtension: Extension = (textarea) => {
     const INVALID_PATTERN = /^\s*(\d+(\.\d+)?\.?)\)\s*/;
 
     const handler = (event: KeyboardEvent) => {
-        if (event.code !== 'Enter') {
+        if (event.defaultPrevented || event.code !== 'Enter' || event.shiftKey) {
             return;
         }
 
-        const lineText = cursor.position.line.text;
+        const { quote, rest: lineText } = splitQuotePrefix(cursor.position.line.text);
         const match = lineText.match(INVALID_PATTERN);
 
         if (!match) {
@@ -255,7 +268,7 @@ export const orderedListAutoCorrectExtension: Extension = (textarea) => {
 
         const indent = ' '.repeat(lineText.match(/^\s*/)?.[0].length ?? 0);
         const orderPrefix = match[1];
-        const newLineContent = `${indent}${orderPrefix}. ${lineText.slice(match[0].length)}`;
+        const newLineContent = `${quote}${indent}${orderPrefix}. ${lineText.slice(match[0].length)}`;
 
         cursor.replaceLine(cursor.position.line.lineNumber, newLineContent);
 
@@ -264,4 +277,60 @@ export const orderedListAutoCorrectExtension: Extension = (textarea) => {
 
     textarea.addEventListener('keydown', handler);
     return () => textarea.removeEventListener('keydown', handler);
+};
+
+/**
+ * Keeps blockquote markers in place while typing: Enter continues the quote, Backspace right after
+ * the markers joins the line with the previous one, pasting several lines quotes each of them.
+ * `shift+enter` and `shift+backspace` keep the plain textarea behavior.
+ */
+export const blockquoteExtension: Extension = (textarea) => {
+    const cursor = new Cursor(textarea);
+
+    const apply = (event: Event, edit: TextEdit | null) => {
+        if (!edit) {
+            return;
+        }
+        event.preventDefault();
+        cursor.replaceRange(edit.from, edit.to, edit.text);
+    };
+
+    const keydownListener = (event: KeyboardEvent) => {
+        if (
+            event.defaultPrevented ||
+            event.isComposing ||
+            event.shiftKey ||
+            event.altKey ||
+            event.ctrlKey ||
+            event.metaKey
+        ) {
+            return;
+        }
+
+        const { value, selectionStart, selectionEnd } = textarea;
+
+        if (event.key === 'Enter') {
+            apply(event, quoteEnter(value, selectionStart, selectionEnd));
+        } else if (event.key === 'Backspace') {
+            apply(event, quoteBackspace(value, selectionStart, selectionEnd));
+        }
+    };
+
+    const pasteListener = (event: ClipboardEvent) => {
+        const data = event.clipboardData;
+        if (event.defaultPrevented || !data || data.files.length > 0) {
+            return;
+        }
+
+        const { value, selectionStart, selectionEnd } = textarea;
+        apply(event, quotePaste(value, selectionStart, selectionEnd, data.getData('text/plain')));
+    };
+
+    textarea.addEventListener('keydown', keydownListener);
+    textarea.addEventListener('paste', pasteListener);
+
+    return () => {
+        textarea.removeEventListener('keydown', keydownListener);
+        textarea.removeEventListener('paste', pasteListener);
+    };
 };

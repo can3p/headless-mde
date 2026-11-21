@@ -246,7 +246,7 @@ export type CommandHandlerContext = {
 | **code-block**     | Inserts or wraps code block markup                                 |                        |
 | **code-inline**    | Inserts or wraps inline code markup                                |                        |
 | **code**           | Inserts or wraps inline or block code markup dependent of selected |                        |
-| **block-quotes**   | Inserts or wraps block-quotes markup                               |                        |
+| **block-quotes**   | Quotes the selected lines, or removes one level if all are quoted  |                        |
 | **h1**             | Inserts h1 headline                                                |                        |
 | **h2**             | Inserts h2 headline                                                |                        |
 | **h3**             | Inserts h3 headline                                                |                        |
@@ -263,6 +263,7 @@ export type CommandHandlerContext = {
 | **preferredBoldSyntax**                     | `"**"` \| `"__"`                            | Preferred bold wrap syntax `default: '**'`                                                                                               |
 | **preferredItalicSyntax**                   | `"*"` \| `"_"`                              | Preferred italic wrap syntax `default: '*'`                                                                                              |
 | **preferredUnorderedListSyntax**            | `"-"` \| `"*"` \| `"+"`                     | Preferred unordered list prefix `default: '*'`                                                                                           |
+| **enableBlockquoteExtension**               | `boolean`                                   | Keeps `>` markers in place on `enter`, `backspace` and `paste` inside a blockquote, see [Blockquotes](#blockquotes) `default:false`       |
 | **enableEmDashExtension**                   | `boolean`                                   | Converts two dashes followed by a space into an em dash outside fenced code blocks `default:true`                                        |
 | **enableIndentExtension**                   | `boolean`                                   | Will handle `tab` and `shift+tab` keystrokes, on which will insert/remove indentation instead of the default behavior `default:true`     |
 | **enableLinkPasteExtension**                | `boolean`                                   | Will handle `paste` event, on which will wrap pasted with link/image markup if pasted is URL `default:true`                              |
@@ -283,6 +284,28 @@ export type CommandHandlerContext = {
 | **orderedListPlaceholder**                  | `string`                                    | `default: 'ordered list'`                                                                                                                |
 | **strikeThroughPlaceholder**                | `string`                                    | `default: 'strike through'`                                                                                                              |
 | **unorderedListPlaceholder**                | `string`                                    | `default: 'unordered list'`                                                                                                              |
+
+---
+
+### Blockquotes
+
+List, headline, code block and indent commands work after the `>` markers of a quoted line, so `> a` becomes `> * a`, not `* > a`. Inside a quote the code block command wraps whole lines, because its fences need the markers too. A code block opened inside a quote ends with the quote, and `>` inside a code block is code.
+
+With `enableBlockquoteExtension: true` the markers also take care of themselves while typing:
+
+| Caret                                          | Key               | Result                                                        |
+| ---------------------------------------------- | ----------------- | ------------------------------------------------------------- |
+| `> text│`                                      | `enter`           | `> text`, `> │` (same depth, `>>` stays `>>`)                 |
+| `> - item│`, `> 1. item│`                     | `enter`           | `> - │`, `> 2. │`                                             |
+| `> - │` (empty item)                           | `enter`           | `> │`: leaves the list, stays in the quote                     |
+| `> │` after a line with text                  | `enter`           | `>`, `> │`: a paragraph break inside the quote                |
+| `> │` after an empty `>` line                  | `enter`           | leaves one quote level, keeping a blank line                  |
+| `> a`, `> │b`                                  | `backspace`       | `> a │b`: joins the lines                                     |
+| `>`, `> │b` (after a paragraph break)          | `backspace`       | removes the break                                             |
+| `> │b` on the first line of a quote            | `backspace`       | `│b`: removes one quote level                                 |
+| inside a code block                            | `enter`, `backspace`, paste | only keeps the markers of the quote holding the block; outside a quote nothing changes |
+| inside a quote                                 | paste of lines    | every pasted line is quoted, blank lines become `>`           |
+| anywhere, lists included                       | `shift+enter`, `shift+backspace` | plain textarea behavior                        |
 
 ---
 

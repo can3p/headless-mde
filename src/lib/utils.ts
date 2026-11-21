@@ -1,7 +1,18 @@
 import { MutableRefObject } from 'react';
+import type { Line } from './Cursor';
 
 export const metaCombination = (...keys: string[]): string[] => {
     return [`command+${keys.join('+')}`, `ctrl+${keys.join('+')}`];
+};
+
+/** Splits text into lines with their 1-based numbers and offsets, `endsAt` excludes the line break */
+export const getLines = (value: string): Line[] => {
+    let startsAt = 0;
+    return value.split('\n').map((text, index) => {
+        const line = { text, lineNumber: index + 1, startsAt, endsAt: startsAt + text.length };
+        startsAt += text.length + 1;
+        return line;
+    });
 };
 
 export const clamp = (val: number, min: number, max: number) => Math.min(Math.max(min, val), max);
@@ -139,32 +150,53 @@ export function escapeRegExp(str: string) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
-export const isInsideFencedCodeBlock = (value: string, cursorAt: number) => {
-    let fence: { character: string; length: number } | null = null;
+type OpenFence = {
+    character: string;
+    length: number;
+    /** Quote depth of the line that opened the fence, the fence lives inside that quote */
+    depth: number;
+};
+
+/**
+ * Finds the fenced code block open at `cursorAt`, `null` outside a code block.
+ * A fence opened inside a blockquote is closed by its closing fence or by the end of the quote,
+ * and `>` inside a code block is code, not a quote marker.
+ */
+export const openFenceAt = (value: string, cursorAt: number): OpenFence | null => {
+    let fence: OpenFence | null = null;
 
     for (const line of value.slice(0, cursorAt).split('\n')) {
-        if (!fence) {
-            const openingFence = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
-            if (openingFence) {
-                fence = { character: openingFence[0], length: openingFence.length };
+        if (fence) {
+            const inside = takeQuoteLevels(line, fence.depth);
+
+            if (inside.depth < fence.depth) {
+                // the quote holding the fence has ended, so has the code block
+                fence = null;
+            } else {
+                const indentation = inside.rest.length - inside.rest.trimStart().length;
+                const closingFence = inside.rest.trim();
+                if (
+                    indentation <= 3 &&
+                    closingFence.length >= fence.length &&
+                    Array.from(closingFence).every((character) => character === fence!.character)
+                ) {
+                    fence = null;
+                }
+                continue;
             }
-            continue;
         }
 
-        const { character: fenceCharacter, length: fenceLength } = fence;
-        const indentation = line.length - line.trimStart().length;
-        const closingFence = line.trim();
-        if (
-            indentation <= 3 &&
-            closingFence.length >= fenceLength &&
-            Array.from(closingFence).every((character) => character === fenceCharacter)
-        ) {
-            fence = null;
+        const { rest, depth } = splitQuotePrefix(line);
+        const openingFence = /^ {0,3}(`{3,}|~{3,})/.exec(rest)?.[1];
+        if (openingFence) {
+            fence = { character: openingFence[0], length: openingFence.length, depth };
         }
     }
 
-    return fence !== null;
+    return fence;
 };
+
+export const isInsideFencedCodeBlock = (value: string, cursorAt: number) => openFenceAt(value, cursorAt) !== null;
 
 export const isURL = (value: unknown): value is string => {
     try {
@@ -177,3 +209,59 @@ export const isURL = (value: unknown): value is string => {
 export const isImageURL = (value: unknown): value is string => {
     return isURL(value) && value.match(/\.(jpeg|jpg|gif|png)$/) !== null;
 };
+
+const QUOTE_PREFIX_RE = /^(?: {0,3}>[ \t]?)+/;
+
+export type QuoteParts = {
+    /** Blockquote markers at the start of the line, including the space after the last one, e.g. `> > ` */
+    quote: string;
+    /** Line content after the markers */
+    rest: string;
+    /** Nesting level, 0 when the line is not quoted */
+    depth: number;
+};
+
+const QUOTE_LEVEL_RE = /^ {0,3}>[ \t]?/;
+
+/**
+ * Splits off at most `levels` quote levels, the rest of the markers stay in `rest`.
+ * `depth` is the number of levels split off.
+ */
+export const takeQuoteLevels = (text: string, levels: number): QuoteParts => {
+    let quote = '';
+    let depth = 0;
+    while (depth < levels) {
+        const level = QUOTE_LEVEL_RE.exec(text.slice(quote.length))?.[0];
+        if (!level) {
+            break;
+        }
+        quote += level;
+        depth++;
+    }
+    return { quote, rest: text.slice(quote.length), depth };
+};
+
+/** Splits a line into its blockquote markers and the content after them */
+export const splitQuotePrefix = (text: string): QuoteParts => {
+    const quote = QUOTE_PREFIX_RE.exec(text)?.[0] ?? '';
+    return { quote, rest: text.slice(quote.length), depth: (quote.match(/>/g) ?? []).length };
+};
+
+/** Markers for a quoted line with content: always ends with a single space, `>>` becomes `>> ` */
+export const quoteContinuation = (quote: string) => (quote === '' ? '' : quote.replace(/[ \t]*$/, ' '));
+
+/** Markers for a quoted line without content (a paragraph break inside the quote): no trailing space */
+export const quoteBlank = (quote: string) => quote.replace(/[ \t]*$/, '');
+
+/** Markers with the innermost level removed: `> > ` becomes `>`, `> ` becomes `` */
+export const quoteOuter = (quote: string) => quote.replace(/ {0,3}>[ \t]?$/, '');
+
+/** Applies `transform` to the content of a line, keeping its blockquote markers */
+export const mapQuotedContent = (text: string, transform: (content: string) => string) => {
+    const { quote, rest } = splitQuotePrefix(text);
+    return quote + transform(rest);
+};
+
+/** Markers for a line with or without content */
+export const quotePrefix = (quote: string, hasContent: boolean) =>
+    hasContent ? quoteContinuation(quote) : quoteBlank(quote);

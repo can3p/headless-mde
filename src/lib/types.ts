@@ -96,6 +96,15 @@ export type TextareaMarkdownOptions = {
 
     enableEmDashExtension: boolean;
 
+    /**
+     * Will handle `enter`, `backspace` and `paste` on blockquote lines so the `>` markers take care of themselves `default:false`
+     * - `enter` continues the quote (and a list inside it), on an empty quote line makes a paragraph break, and on a second empty line leaves the quote
+     * - `backspace` right after the markers joins the line with the previous quoted line, or removes the markers on the first line of a quote
+     * - pasting several lines into a quote quotes every line
+     * - `shift+enter` and `shift+backspace` keep the plain textarea behavior
+     * */
+    enableBlockquoteExtension: boolean;
+
     /** Array of custom prefixes, that need to be wrapped. (Will not work with `enablePrefixWrappingExtension:false`) */
     customPrefixWrapping: (PrefixWrappingConfig | string)[];
 
@@ -150,6 +159,7 @@ export const defaultTextareaMarkdownOptions: TextareaMarkdownOptions = {
     enableProperLineRemoveBehaviorExtension: true,
     enableOrderedListAutoCorrectExtension: false,
     enableEmDashExtension: true,
+    enableBlockquoteExtension: false,
     customPrefixWrapping: [],
 
     boldPlaceholder: 'bold',
