@@ -37,7 +37,6 @@ export default tseslint.config(
         ignores: [
             'dist/**',
             'node_modules/**',
-            'sandbox/**',
             '*.config.js',
             '*.config.cjs',
             'e2e/fixture/main.js',
