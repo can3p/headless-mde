@@ -50,9 +50,7 @@ to define the exception in the webpack config:
 
 Essentially this library just provides the textarea Component. You can choose any markdown parser, create your own layout, and use your own textarea component that is styled and behaves however you like
 
-<p style='max-width:800px;margin-top:8%' align="center">
-  <img src="img/overview.gif" />
-</p>
+See it in action in the [playground](https://can3p.github.io/headless-mde/).
 
 ## Features
 
