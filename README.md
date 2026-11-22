@@ -175,7 +175,7 @@ const { trigger, dispose } = bootstrapTextareaMarkdown(textarea, {
 
 ---
 
-### 👀 You can find more examples [here](https://github.com/Resetand/textarea-markdown-editor/tree/master/sandbox/src/examples)
+### 👀 More examples are in the [usage guide](docs/usage.md) and the [playground](https://can3p.github.io/headless-mde/)
 
 ---
 

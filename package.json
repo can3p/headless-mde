@@ -81,7 +81,6 @@
     "start-site": "node site/build.ts --serve 4174",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.e2e.json",
     "prepublish": "npm run lint && npm run test -- --watchAll=false && npm run build",
-    "start-sandbox": "npm run build; npm --prefix sandbox i -f; npm link sandbox/node_modules/react; npm --prefix sandbox run start",
     "prepare": "tsc"
   }
 }
