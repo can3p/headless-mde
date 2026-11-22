@@ -51,7 +51,7 @@ to define the exception in the webpack config:
 Essentially this library just provides the textarea Component. You can choose any markdown parser, create your own layout, and use your own textarea component that is styled and behaves however you like
 
 <p style='max-width:800px;margin-top:8%' align="center">
-  <img src="https://raw.githubusercontent.com/Resetand/textarea-markdown-editor/master/img/overview.gif" />
+  <img src="img/overview.gif" />
 </p>
 
 ## Features
